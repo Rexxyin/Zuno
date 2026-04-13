@@ -21,10 +21,10 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="h-10 w-10 rounded-full border app-card inline-flex items-center justify-center"
+      className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center"
       aria-label="Toggle theme"
     >
-      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
     </button>
   )
 }

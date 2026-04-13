@@ -1,51 +1,58 @@
-# Zuno Production Action Plan (Design + Auth + End-to-End)
+# Zuno Supabase + Auth Setup (Fix Guide)
 
-## 1) Priority UI upgrades delivered
-- Mobile-first feed with rounded cards, soft gradients, and improved bottom nav.
-- Dark + Light theme toggle (stored in localStorage).
-- Category chips now show **full names + icons** (ex: `🥾 Hiking Trail`).
-- Create Plan flow now asks for **Google Maps link** for meetup point.
-- Feed and plan details surface location in tap-ready maps format.
-- Host Instagram indicator is shown when profile includes Instagram handle.
+## 1) Environment variables
+Create `.env.local`:
 
-## 2) Supabase setup (recommended)
-1. Create project on Supabase.
-2. Add environment variables in `.env.local`:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-3. Run migrations in order:
-   - `supabase/migrations/20260413000000_zuno_mvp_schema.sql`
-   - `supabase/migrations/20260413010000_add_google_maps_link.sql`
-4. In Supabase Auth Providers:
-   - Enable Google (add redirect `https://<project-ref>.supabase.co/auth/v1/callback`)
-   - Enable Phone OTP (and configure SMS provider if required)
-   - Enable Email provider
-
-## 3) Auth routing you should configure
-- App callback route is now: `/auth/callback`
-- In Google OAuth settings, include app callback URL:
-  - Local: `http://localhost:3000/auth/callback`
-  - Prod: `https://your-domain.com/auth/callback`
-
-## 4) End-to-end local verification
 ```bash
-npm install
-npm run dev
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_ANON_KEY
 ```
-Then verify:
-- `/login` Google + email + phone OTP starts auth.
-- `/feed` shows category icon chips and sleek mobile layout.
-- `/plans/create` includes meetup point + Google Maps link field.
-- `/plans/[id]` shows direct location link and host Instagram icon.
 
-## 5) Deploy checklist
-- Add env vars in Vercel/host.
-- Run DB migrations in production project.
-- Set authentication redirect URLs for production domain.
-- Test sign-in + create plan + join flow with two accounts.
+## 2) Run database migrations
+Run both migrations in Supabase SQL editor (in this order):
+1. `supabase/migrations/20260413000000_zuno_mvp_schema.sql`
+2. `supabase/migrations/20260413010000_add_google_maps_link.sql`
 
-## 6) Next recommended improvements
-- Persist user profile editing for Instagram handle.
-- Add OTP verification UI (code entry step) after sending phone OTP.
-- Add map-preview thumbnail card (Google Static Maps or Mapbox).
-- Add custom icon set for categories to match your handcrafted brand style.
+## 3) Supabase Auth provider setup (required)
+In Supabase Dashboard → Authentication → Providers:
+
+### Google provider
+- Enable Google.
+- In Google Cloud Console OAuth app, add authorized redirect URI:
+  - `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
+- Put Google Client ID/Secret into Supabase Google Provider.
+
+### Email provider
+- Keep enabled for email/password login.
+
+### Phone provider (optional)
+- Enable phone if OTP login is needed.
+- Configure SMS provider (Twilio or supported provider).
+
+## 4) URL configuration that must match
+In Supabase Dashboard → Authentication → URL configuration:
+- Site URL:
+  - Local: `http://localhost:3000`
+  - Prod: `https://YOUR_DOMAIN`
+- Additional redirect URLs:
+  - `http://localhost:3000/auth/callback`
+  - `https://YOUR_DOMAIN/auth/callback`
+
+## 5) Why auth failed before + what is fixed now
+- Middleware now redirects unauthenticated users to `/login`.
+- `/auth/callback` now exchanges OAuth code for session.
+- On successful auth callback, `public.users` row is upserted so profile loads.
+- `/settings` page now contains working logout.
+
+## 6) Verify end-to-end
+1. Open `/login` and click Google sign in.
+2. After callback, you should land on `/feed`.
+3. Open `/profile/me` and verify your user data appears.
+4. Open `/settings` and click logout.
+5. You should return to `/login` and protected routes should redirect.
+
+## 7) Design updates included
+- Smaller font/buttons.
+- No horizontal top scrollbar in feed categories (wrapped chips).
+- Cleaner profile layout and settings access from settings page only.
+- Meetup input includes Google Maps link for direct map opening in feed/cards.
