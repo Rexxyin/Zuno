@@ -5,6 +5,7 @@ import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
 import type { Plan } from '@/lib/types'
 import { useCity } from '@/components/CityContext'
+import { normalizeCityKey } from '@/lib/cities'
 
 export default function MyPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([])
@@ -29,7 +30,7 @@ export default function MyPlansPage() {
     fetchSaved()
   }, [])
 
-  const cityPlans = plans.filter((plan) => (plan.city || '').toLowerCase().trim() === selectedCity.toLowerCase())
+  const cityPlans = plans.filter((plan) => normalizeCityKey(plan.city) === normalizeCityKey(selectedCity))
 
   return (
     <div className="pb-24 pt-4">

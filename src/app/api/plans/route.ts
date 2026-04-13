@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { canonicalizeCity } from '@/lib/cities'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     description: body.description ?? null,
     category: body.category ?? 'other',
     location_name: body.location_name,
-    city: body.city || 'General',
+    city: canonicalizeCity(body.city) || 'General',
     datetime: body.datetime,
     max_people: Number(body.max_people || 8),
     whatsapp_link: body.whatsapp_link || '',
