@@ -93,7 +93,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         <button onClick={() => router.back()} className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center"><ChevronLeft className="h-4 w-4" /></button>
         <p className="text-sm font-semibold">Plan</p>
         <button onClick={toggleSave} className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center">
-          <Heart className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+          <Heart className={`h-4 w-4 ${isSaved ? 'fill-[#d4522a] text-[#d4522a]' : ''}`} />
         </button>
       </div>
 
@@ -138,7 +138,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
           </a>
         )}
 
-        {plan.whatsapp_link && (
+        {plan.whatsapp_link && isJoined && !isExpired && (
           <a href={plan.whatsapp_link} target="_blank" rel="noreferrer" className="block rounded-xl bg-green-500 px-4 py-3 text-center text-sm font-semibold text-white">
             Open WhatsApp group
           </a>
@@ -150,7 +150,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
           ) : isHost ? (
             <button disabled className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold app-muted">You are the organizer</button>
           ) : !isJoined ? (
-            <button onClick={join} className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white">Join plan</button>
+            <button onClick={join} className="rounded-xl bg-[#1a1410] px-4 py-2.5 text-sm font-semibold text-[#faf8f4]">Join plan</button>
           ) : (
             <button onClick={leave} className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold">Leave anytime</button>
           )}

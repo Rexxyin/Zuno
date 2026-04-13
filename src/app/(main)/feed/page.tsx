@@ -73,14 +73,14 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="pb-24 min-h-screen bg-white">
+    <div className="pb-24 min-h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 pt-4 pb-3">
+      <div className="sticky top-0 z-40 app-surface border-b app-card pt-4 pb-3">
         <div className="mx-auto max-w-md px-4">
           {/* Title & Location */}
           <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Discover</h1>
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-700 border border-teal-200">
+            <h1 className="text-2xl font-extrabold text-[#1a1410]">Discover</h1>
+            <div className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] app-card px-2.5 py-1.5 text-xs font-semibold text-[#1a1410]">
               <MapPin className="h-3.5 w-3.5" />
               {selectedCity}
             </div>
@@ -88,28 +88,28 @@ export default function FeedPage() {
 
           {/* Search Bar */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 text-gray-400 -translate-y-1/2" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 text-[#8f8272] -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search plans, people, places..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 border border-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="w-full rounded-xl border app-card bg-[#f5efe5] py-2.5 pl-9 pr-3 text-sm text-[#1a1410] placeholder:text-[#8f8272] focus:outline-none focus:ring-1 focus:ring-[#1a1410]"
             />
           </div>
         </div>
       </div>
 
       {/* Categories Grid */}
-      <div className="border-b border-gray-100 bg-white">
+      <div className="border-b app-card">
         <div className="mx-auto max-w-md px-4 py-3">
           <div className="grid grid-cols-4 gap-2">
             <button
               onClick={() => setSelectedCategory(null)}
               className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${
                 selectedCategory === null
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  ? 'bg-[#1a1410] text-[#faf8f4] border-[1.5px] border-[#1a1410]'
+                  : 'border-[1.5px] app-card text-[#5a4e42]'
               }`}
             >
               <span className="text-lg mb-1">🎯</span>
@@ -121,8 +121,8 @@ export default function FeedPage() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${
                   selectedCategory === cat
-                    ? 'bg-teal-600 text-white border border-teal-600'
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    ? 'bg-[#d4522a] text-[#faf8f4] border-[1.5px] border-[#d4522a]'
+                    : 'border-[1.5px] app-card text-[#5a4e42]'
                 }`}
               >
                 <span className="text-lg mb-1">
@@ -145,7 +145,7 @@ export default function FeedPage() {
                 <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-500"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
               </span>
-              <h2 className="text-xs font-bold text-red-700 uppercase tracking-wide">Happening soon (Next 30 mins)</h2>
+              <h2 className="text-xs font-bold text-[#d4522a] uppercase tracking-wide">Happening soon (Next 30 mins)</h2>
             </div>
             <div className="grid gap-3 mb-6">
               {upcomingPlans.map((plan) => (
@@ -156,18 +156,18 @@ export default function FeedPage() {
                 />
               ))}
             </div>
-            <div className="h-px bg-gray-200 mb-6" />
+            <div className="h-px bg-[#ded3c5] mb-6" />
           </div>
         )}
 
         {/* Happening Soon Alert */}
         {nextPlan && minutesToNext && !upcomingPlans.length && (
-          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <div className="mb-4 rounded-lg border app-card bg-[#f8efe3] p-3">
             <div className="flex items-start gap-2">
               <span className="text-lg">⏰</span>
               <div>
-                <p className="text-xs font-bold text-amber-700 uppercase">Starting in {minutesToNext} min</p>
-                <p className="text-sm font-medium text-amber-900 mt-0.5">{nextPlan.title}</p>
+                <p className="text-xs font-bold text-[#d4522a] uppercase">Starting in {minutesToNext} min</p>
+                <p className="text-sm font-medium text-[#1a1410] mt-0.5">{nextPlan.title}</p>
               </div>
             </div>
           </div>
@@ -177,16 +177,16 @@ export default function FeedPage() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 rounded-lg bg-gray-200 animate-pulse" />
+              <div key={i} className="h-48 rounded-lg app-card animate-pulse" />
             ))}
           </div>
         ) : filteredPlans.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-lg font-semibold text-gray-900 mb-1">No plans yet</p>
-            <p className="text-xs text-gray-600 mb-6">Be the first to create one</p>
+            <p className="text-lg font-semibold text-[#1a1410] mb-1">No plans yet</p>
+            <p className="text-xs app-muted mb-6">Be the first to create one</p>
             <a
               href="/plans/create"
-              className="inline-block rounded-lg bg-teal-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
+              className="inline-block rounded-lg bg-[#1a1410] px-6 py-2.5 text-xs font-semibold text-[#faf8f4] transition-colors hover:opacity-90"
             >
               Create a Plan
             </a>

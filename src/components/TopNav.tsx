@@ -19,12 +19,12 @@ export function TopNav() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] app-muted">Zuno</p>
-            <p className="text-sm font-semibold">City based plans</p>
+            <p className="text-sm font-semibold text-[#1a1410]">City plans</p>
           </div>
 
-          <label className="inline-flex max-w-[60%] items-center gap-1.5 rounded-xl border app-card px-2 py-1.5 text-xs app-muted">
+          <label className="inline-flex max-w-[60%] items-center gap-1.5 rounded-full border-[1.5px] app-card px-2.5 py-1.5 text-xs text-[#1a1410]">
             <MapPin className="h-3.5 w-3.5" />
-            <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-transparent text-sm font-medium outline-none">
+            <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-transparent text-sm font-semibold text-[#1a1410] outline-none">
               {INDIA_HIGH_POTENTIAL_CITIES.map((city) => (
                 <option key={city} value={city}>{city}</option>
               ))}
