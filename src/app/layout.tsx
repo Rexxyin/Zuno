@@ -12,17 +12,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(() => {
-              const saved = localStorage.getItem('zuno-theme');
-              const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-              document.documentElement.setAttribute('data-theme', theme);
-            })();`,
-          }}
-        />
       </head>
       <body className={`${inter.className}`}>
         <main className="min-h-screen">{children}</main>

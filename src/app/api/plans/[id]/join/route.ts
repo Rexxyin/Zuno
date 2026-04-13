@@ -2,18 +2,19 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: plan } = await supabase.from('plans').select('id, approval_mode, host_id').eq('id', params.id).single()
+  const { data: plan } = await supabase.from('plans').select('id, approval_mode, host_id').eq('id', id).single()
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
   if (plan.host_id === auth.user.id) return NextResponse.json({ error: 'Host is already part of the plan' }, { status: 400 })
 
   const status = plan.approval_mode ? 'pending' : 'joined'
-  const { error } = await supabase.from('plan_participants').upsert({ user_id: auth.user.id, plan_id: params.id, status }, { onConflict: 'user_id,plan_id' })
+  const { error } = await supabase.from('plan_participants').upsert({ user_id: auth.user.id, plan_id: id, status }, { onConflict: 'user_id,plan_id' })
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
   if (!plan.approval_mode) {
