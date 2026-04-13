@@ -3,6 +3,7 @@
 import { use, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {  Users, Calendar, Heart, ChevronLeft, Info, Instagram } from 'lucide-react'
+import Link from 'next/link'
 import Image from 'next/image'
 import { BottomNav } from '@/components/BottomNav'
 import { LocationLink } from '@/components/LocationLink'
@@ -56,6 +57,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
       load()
     } else {
       const err = await resp.json()
+      if (resp.status === 401) return router.push(`/login?next=/plans/${id}`)
       alert(err.error || 'Unable to join')
     }
   }
@@ -71,6 +73,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
   const toggleSave = async () => {
     const method = isSaved ? 'DELETE' : 'POST'
     const resp = await fetch(`/api/plans/${id}/favorite`, { method })
+    if (resp.status === 401) return router.push(`/login?next=/plans/${id}`)
     if (resp.ok) setIsSaved(!isSaved)
   }
 
@@ -142,6 +145,22 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
           <a href={plan.whatsapp_link} target="_blank" rel="noreferrer" className="block rounded-xl bg-green-500 px-4 py-3 text-center text-sm font-semibold text-white">
             Open WhatsApp group
           </a>
+        )}
+
+
+
+        {(plan.participants || []).length > 0 && (
+          <div className="rounded-2xl border app-card p-3 text-sm">
+            <p className="mb-2 font-semibold">People joining</p>
+            <div className="space-y-2">
+              {(plan.participants || []).filter((p: any) => p.status === 'joined').map((p: any) => (
+                <Link key={p.id} href={`/profile/${p.user_id}`} className="flex items-center justify-between rounded-lg bg-black/5 px-2 py-1.5">
+                  <span>{p.user?.name || 'User'}</span>
+                  <span className="text-xs app-muted">View profile</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="grid grid-cols-2 gap-2">

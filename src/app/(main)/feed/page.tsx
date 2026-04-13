@@ -3,18 +3,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
-import { MapPin, Search } from 'lucide-react'
+import { Lock, MapPin, Search } from 'lucide-react'
 import type { Plan, PlanCategory } from '@/lib/types'
 import { CATEGORY_META } from '@/lib/categories'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { useCity } from '@/components/CityContext'
 import { normalizeCityKey } from '@/lib/cities'
+import { createClient } from '@/lib/supabase/client'
 
 export default function FeedPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<PlanCategory | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isAuthed, setIsAuthed] = useState(false)
   const { selectedCity } = useCity()
 
   const fetchPlans = async () => {
@@ -33,6 +35,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     fetchPlans()
+    createClient().auth.getUser().then(({ data }) => setIsAuthed(!!data.user))
   }, [])
 
   const categories = Object.keys(CATEGORY_META) as PlanCategory[]
@@ -51,33 +54,22 @@ export default function FeedPage() {
     [plans, selectedCategory, selectedCity, searchQuery]
   )
 
-  // Plans happening in next 30 mins
-  const upcomingPlans = useMemo(() => {
-    const now = new Date()
-    const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60000)
-    return filteredPlans.filter((p) => {
-      const planTime = new Date(p.datetime)
-      return planTime > now && planTime <= thirtyMinsFromNow
-    })
-  }, [filteredPlans])
-
-  const nextPlan = filteredPlans.find((p) => +new Date(p.datetime) > Date.now())
-  const minutesToNext = nextPlan ? Math.max(1, Math.round((+new Date(nextPlan.datetime) - Date.now()) / 60000)) : null
+  const visiblePlans = isAuthed ? filteredPlans : filteredPlans.slice(0, 5)
 
   const toggleFavorite = async (plan: Plan) => {
+    if (!isAuthed) return
     const method = plan.is_favorite ? 'DELETE' : 'POST'
+    setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_favorite: !p.is_favorite } : p)))
     const res = await fetch(`/api/plans/${plan.id}/favorite`, { method })
-    if (res.ok) {
-      setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_favorite: !p.is_favorite } : p)))
+    if (!res.ok) {
+      setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_favorite: !!plan.is_favorite } : p)))
     }
   }
 
   return (
     <div className="pb-24 min-h-screen">
-      {/* Header */}
       <div className="sticky top-0 z-40 app-surface border-b app-card pt-4 pb-3">
         <div className="mx-auto max-w-md px-4">
-          {/* Title & Location */}
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-extrabold text-[#1a1410]">Discover</h1>
             <div className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] app-card px-2.5 py-1.5 text-xs font-semibold text-[#1a1410]">
@@ -86,7 +78,8 @@ export default function FeedPage() {
             </div>
           </div>
 
-          {/* Search Bar */}
+          {!isAuthed && <p className="mb-3 text-xs font-semibold text-[#d4522a]">Hurry! 5 live plans unlocked. Sign up to unlock the full feed and join.</p>}
+
           <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 h-4 w-4 text-[#8f8272] -translate-y-1/2" />
             <input
@@ -100,31 +93,15 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Categories Grid */}
       <div className="border-b app-card">
         <div className="mx-auto max-w-md px-4 py-3">
           <div className="grid grid-cols-4 gap-2">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${
-                selectedCategory === null
-                  ? 'bg-[#1a1410] text-[#faf8f4] border-[1.5px] border-[#1a1410]'
-                  : 'border-[1.5px] app-card text-[#5a4e42]'
-              }`}
-            >
+            <button onClick={() => setSelectedCategory(null)} className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${selectedCategory === null ? 'bg-[#1a1410] text-[#faf8f4] border-[1.5px] border-[#1a1410]' : 'border-[1.5px] app-card text-[#5a4e42]'}`}>
               <span className="text-lg mb-1">🎯</span>
               All
             </button>
             {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${
-                  selectedCategory === cat
-                    ? 'bg-[#d4522a] text-[#faf8f4] border-[1.5px] border-[#d4522a]'
-                    : 'border-[1.5px] app-card text-[#5a4e42]'
-                }`}
-              >
+              <button key={cat} onClick={() => setSelectedCategory(cat)} className={`flex flex-col items-center justify-center rounded-xl p-3 transition-all text-xs font-semibold ${selectedCategory === cat ? 'bg-[#d4522a] text-[#faf8f4] border-[1.5px] border-[#d4522a]' : 'border-[1.5px] app-card text-[#5a4e42]'}`}>
                 <span className="text-lg mb-1">
                   <CategoryIcon icon={CATEGORY_META[cat].icon} className="h-5 w-5" />
                 </span>
@@ -135,72 +112,26 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="mx-auto max-w-md px-4 py-4">
-        {/* Upcoming in 30 mins Section */}
-        {upcomingPlans.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-red-500"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-              <h2 className="text-xs font-bold text-[#d4522a] uppercase tracking-wide">Happening soon (Next 30 mins)</h2>
-            </div>
-            <div className="grid gap-3 mb-6">
-              {upcomingPlans.map((plan) => (
-                <PlanCard
-                  key={plan.id}
-                  plan={plan}
-                  onToggleFavorite={() => toggleFavorite(plan)}
-                />
-              ))}
-            </div>
-            <div className="h-px bg-[#ded3c5] mb-6" />
-          </div>
-        )}
-
-        {/* Happening Soon Alert */}
-        {nextPlan && minutesToNext && !upcomingPlans.length && (
-          <div className="mb-4 rounded-lg border app-card bg-[#f8efe3] p-3">
-            <div className="flex items-start gap-2">
-              <span className="text-lg">⏰</span>
-              <div>
-                <p className="text-xs font-bold text-[#d4522a] uppercase">Starting in {minutesToNext} min</p>
-                <p className="text-sm font-medium text-[#1a1410] mt-0.5">{nextPlan.title}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Plans Grid */}
         {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 rounded-lg app-card animate-pulse" />
-            ))}
-          </div>
-        ) : filteredPlans.length === 0 ? (
+          <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-48 rounded-lg app-card animate-pulse" />)}</div>
+        ) : visiblePlans.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-lg font-semibold text-[#1a1410] mb-1">No plans yet</p>
             <p className="text-xs app-muted mb-6">Be the first to create one</p>
-            <a
-              href="/plans/create"
-              className="inline-block rounded-lg bg-[#1a1410] px-6 py-2.5 text-xs font-semibold text-[#faf8f4] transition-colors hover:opacity-90"
-            >
-              Create a Plan
-            </a>
           </div>
         ) : (
           <div className="grid gap-3">
-            {filteredPlans.map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                onToggleFavorite={() => toggleFavorite(plan)}
-              />
+            {visiblePlans.map((plan) => (
+              <PlanCard key={plan.id} plan={plan} onToggleFavorite={() => toggleFavorite(plan)} isAuthed={isAuthed} />
             ))}
           </div>
+        )}
+
+        {!isAuthed && filteredPlans.length > 5 && (
+          <a href="/login?next=/feed" className="mt-4 block rounded-xl border border-dashed app-card p-4 text-center text-sm font-semibold text-[#1a1410]">
+            <Lock className="mx-auto mb-1 h-4 w-4" /> {filteredPlans.length - 5} more plans are locked. Sign up to unlock.
+          </a>
         )}
       </div>
 

@@ -22,6 +22,11 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     .eq('plan_id', id)
     .in('status', ['joined', 'pending'])
 
+  const isParticipant = (participants || []).some((p: any) => p.user_id === auth.user?.id)
+  if (plan.visibility === 'private' && !(auth.user && (plan.host_id === auth.user.id || isParticipant))) {
+    return NextResponse.json({ error: 'This private plan is only visible to approved members via invite link.' }, { status: 403 })
+  }
+
   return NextResponse.json({ ...plan, participants: participants || [], current_user_id: auth.user?.id || null })
 }
 

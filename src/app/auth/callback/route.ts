@@ -10,13 +10,9 @@ export async function GET(request: Request) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
 
-  if (code) {
-    await supabase.auth.exchangeCodeForSession(code)
-  }
+  if (code) await supabase.auth.exchangeCodeForSession(code)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
     const payload = {
@@ -26,13 +22,18 @@ export async function GET(request: Request) {
       instagram_handle: null,
       instagram_url: null,
       gpay_link: null,
+      phone_number: user.phone || null,
     }
 
     const { error } = await supabase.from('users').upsert(payload)
-    if (error?.message?.includes('instagram_url') || error?.message?.includes('gpay_link')) {
-      const { instagram_url, gpay_link, ...fallback } = payload
+    if (error?.message?.includes('instagram_url') || error?.message?.includes('gpay_link') || error?.message?.includes('phone_number')) {
+      const { instagram_url, gpay_link, phone_number, ...fallback } = payload
       await supabase.from('users').upsert(fallback)
     }
+
+    const { data: profile } = await supabase.from('users').select('name,gender,age,phone_number,instagram_url').eq('id', user.id).single()
+    const needsOnboarding = !(profile?.name && profile?.gender && profile?.age && profile?.phone_number && profile?.instagram_url)
+    if (needsOnboarding) return NextResponse.redirect(`${origin}/onboarding`)
   }
 
   return NextResponse.redirect(`${origin}${next}`)

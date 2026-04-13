@@ -29,9 +29,13 @@ export default function CreatePlanPage() {
     whatsapp_link: '',
     approval_mode: false,
     female_only: false,
+    visibility: 'public',
+    host_mode: 'host_managed',
     image_url: '',
     show_payment_options: false,
     estimated_cost: '',
+    total_amount: '',
+    per_person_amount: '',
   })
 
   useEffect(() => {
@@ -125,11 +129,21 @@ export default function CreatePlanPage() {
         {currentStep === 2 && (
           <div className="space-y-3 rounded-2xl border app-card p-4 text-sm">
             <input type="number" min="2" name="max_people" value={formData.max_people} onChange={handleChange} className="w-full rounded-xl border app-card px-3 py-2.5" />
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, visibility: 'public' }))} className={`rounded-xl border px-3 py-2 text-xs ${formData.visibility === 'public' ? 'bg-black text-white border-black' : 'app-card'}`}>Public</button>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, visibility: 'private' }))} className={`rounded-xl border px-3 py-2 text-xs ${formData.visibility === 'private' ? 'bg-black text-white border-black' : 'app-card'}`}>Private (invite-only)</button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, host_mode: 'host_managed', approval_mode: true }))} className={`rounded-xl border px-3 py-2 text-xs ${formData.host_mode === 'host_managed' ? 'bg-black text-white border-black' : 'app-card'}`}>Host manages requests</button>
+              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, host_mode: 'open', approval_mode: false }))} className={`rounded-xl border px-3 py-2 text-xs ${formData.host_mode === 'open' ? 'bg-black text-white border-black' : 'app-card'}`}>Open to everyone</button>
+            </div>
             <input type="url" name="whatsapp_link" value={formData.whatsapp_link} onChange={handleChange} placeholder="WhatsApp group link (single place)" className="w-full rounded-xl border app-card px-3 py-2.5" />
             <input type="number" name="estimated_cost" value={formData.estimated_cost} onChange={handleChange} placeholder="Estimated budget per person (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
-            <label className="flex items-center gap-2"><input type="checkbox" name="show_payment_options" checked={formData.show_payment_options} onChange={handleChange} /> Show organizer payment options</label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="approval_mode" checked={formData.approval_mode} onChange={handleChange} /> Require approval</label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="female_only" checked={formData.female_only} onChange={handleChange} /> Women only</label>
+            <input type="number" name="total_amount" value={formData.total_amount} onChange={handleChange} placeholder="Total amount (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
+            <input type="number" name="per_person_amount" value={formData.per_person_amount} onChange={handleChange} placeholder="Per person amount (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
+            <label className="flex items-center justify-between gap-2"><span>Show organizer payment options</span><input type="checkbox" role="switch" name="show_payment_options" checked={formData.show_payment_options} onChange={handleChange} /></label>
+            <label className="flex items-center justify-between gap-2"><span>Require approval</span><input type="checkbox" role="switch" name="approval_mode" checked={formData.approval_mode} onChange={handleChange} disabled={formData.host_mode === 'open'} /></label>
+            <label className="flex items-center justify-between gap-2"><span>Women only</span><input type="checkbox" role="switch" name="female_only" checked={formData.female_only} onChange={handleChange} /></label>
           </div>
         )}
 

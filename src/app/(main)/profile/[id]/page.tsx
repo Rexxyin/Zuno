@@ -2,7 +2,8 @@
 
 import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Instagram, ShieldCheck, LogOut, Settings } from 'lucide-react'
+import { ChevronLeft, Instagram, LogOut, Settings } from 'lucide-react'
+import Image from 'next/image'
 import { TrustBadge } from '@/components/TrustBadge'
 import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/lib/supabase/client'
@@ -74,8 +75,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         {/* Hero Section */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 text-center">
           {/* Avatar */}
-          <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-xl font-bold text-white">
-            {user.name?.charAt(0).toUpperCase() || 'U'}
+          <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-xl font-bold text-white">
+            {user.avatar_url ? <Image src={user.avatar_url} alt={user.name} width={80} height={80} className="h-full w-full object-cover" /> : (user.name?.charAt(0).toUpperCase() || 'U')}
           </div>
 
           {/* Name */}
@@ -121,15 +122,10 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
           </div>
         </div>
 
-        {/* Action Buttons (if own profile) */}
         {isOwnProfile && (
           <div className="grid grid-cols-2 gap-2 pt-2">
-            <a href="/settings" className="rounded-lg bg-gray-900 px-4 py-2.5 text-center text-xs font-semibold text-white hover:bg-gray-800 transition-colors active:scale-95 inline-flex items-center justify-center gap-1.5">
-              <Settings className="h-4 w-4" /> Edit
-            </a>
-            <button onClick={handleSignOut} disabled={signingOut} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-center text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors active:scale-95 disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
-              <LogOut className="h-4 w-4" /> {signingOut ? 'Signing...' : 'Sign Out'}
-            </button>
+            <a href="/settings" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-center text-xs font-semibold text-gray-700 inline-flex items-center justify-center gap-1.5"><Settings className="h-4 w-4" /> Manage profile</a>
+            <button onClick={handleSignOut} disabled={signingOut} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-center text-xs font-semibold text-gray-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"><LogOut className="h-4 w-4" /> {signingOut ? 'Signing...' : 'Sign Out'}</button>
           </div>
         )}
 
