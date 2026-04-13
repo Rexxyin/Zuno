@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --purple: #534AB7;
+  --purple-light: #EEEDFE;
+  --teal: #1D9E75;
+  --teal-light: #E1F5EE;
+  --coral: #D85A30;
+  --coral-light: #FAECE7;
+  --amber: #BA7517;
+  --amber-light: #FAEEDA;
+  --pink: #D4537E;
+  --pink-light: #FBEAF0;
+  --dark: #1A1A1A;
+  --muted: #6B6B6B;
+  --border: #E0DED6;
+  --bg: #FAFAF8;
+  --card: #FFFFFF;
+  --radius-card: 16px;
+  --radius-btn: 100px;
+  --radius-sm: 8px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--dark);
+}
