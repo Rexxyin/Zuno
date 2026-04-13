@@ -5,14 +5,33 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
+  const { data: auth } = await supabase.auth.getUser()
+
   const { data, error } = await supabase
     .from('plans')
-    .select('*, host:users!plans_host_id_fkey(*)')
+    .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status)')
     .order('datetime', { ascending: true })
     .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const plans = data || []
+  if (!auth.user) return NextResponse.json(plans)
+
+  const { data: favorites } = await supabase
+    .from('plan_favorites')
+    .select('plan_id')
+    .eq('user_id', auth.user.id)
+
+  const favSet = new Set((favorites || []).map((f: any) => f.plan_id))
+
+  return NextResponse.json(
+    plans.map((p: any) => ({
+      ...p,
+      is_favorite: favSet.has(p.id),
+      is_joined: (p.participants || []).some((pp: any) => pp.user_id === auth.user?.id && pp.status === 'joined'),
+    }))
+  )
 }
 
 export async function POST(request: Request) {

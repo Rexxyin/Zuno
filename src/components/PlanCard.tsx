@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { Plan } from '@/lib/types'
 import { TrustBadge } from './TrustBadge'
 import { AvatarStack } from './AvatarStack'
-import { MapPin, Users, Calendar, Clock, ChevronRight, Instagram, Info } from 'lucide-react'
+import { MapPin, Users, Calendar, Clock, ChevronRight, Instagram, Info, Heart, CheckCircle2 } from 'lucide-react'
 import { CATEGORY_META } from '@/lib/categories'
 import { LocationLink } from './LocationLink'
 import { CategoryIcon } from './CategoryIcon'
 
-export function PlanCard({ plan }: { plan: Plan }) {
+export function PlanCard({ plan, onToggleFavorite }: { plan: Plan; onToggleFavorite?: () => void }) {
   if (!plan) return null
 
   const joinedParticipants = (plan.participant_count || plan.participants?.length || 0)
@@ -37,24 +37,32 @@ export function PlanCard({ plan }: { plan: Plan }) {
         <div className="absolute right-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
           {spotsLeft} spots left
         </div>
-        <div className="absolute bottom-3 left-3 right-3 text-white">
-          <h3 className="text-xl font-black line-clamp-1">{plan.title}</h3>
-          <div className="mt-1 flex items-center gap-2 text-xs text-white/90">
-            <MapPin className="h-3 w-3" />
-            <span className="line-clamp-1">{plan.city || 'General'} · {plan.location_name}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onToggleFavorite?.()
+          }}
+          className="absolute right-3 bottom-3 rounded-full bg-black/70 p-2 text-white"
+          aria-label="toggle favorite"
+        >
+          <Heart className={`h-4 w-4 ${plan.is_favorite ? 'fill-red-500 text-red-500' : ''}`} />
+        </button>
+        {plan.is_joined && (
+          <div className="absolute left-3 bottom-3 rounded-full bg-green-500 px-2 py-1 text-[11px] font-semibold text-white inline-flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> Joined
           </div>
-        </div>
+        )}
       </div>
 
       <div className="space-y-3 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">{plan.host?.name || 'Host'}</span>
-            {plan.host?.instagram_url && (
-              <button type="button" className="text-pink-500" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(plan.host?.instagram_url || '', '_blank'); }}>
-                <Instagram className="h-4 w-4" />
-              </button>
-            )}
+            <button type="button" className={`${plan.host?.instagram_url ? 'text-pink-500' : 'text-gray-400'}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (plan.host?.instagram_url) window.open(plan.host?.instagram_url, '_blank'); }}>
+              <Instagram className="h-4 w-4" />
+            </button>
             <TrustBadge score={plan.host?.reliability_score ?? 100} />
           </div>
           <ChevronRight className="h-4 w-4 app-muted" />
@@ -67,6 +75,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
         </div>
 
         <p className="text-[11px] app-muted inline-flex items-center gap-1"><Info className="h-3 w-3" /> Host is included in participant count</p>
+        <div className="text-xs app-muted inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {plan.city || '-'}</div>
 
         <LocationLink location={plan.location_name} googleMapsLink={plan.google_maps_link} />
 

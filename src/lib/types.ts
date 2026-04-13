@@ -35,6 +35,8 @@ export interface Plan {
   show_payment_options?: boolean
   estimated_cost?: number | null
   participant_count?: number
+  is_joined?: boolean
+  is_favorite?: boolean
   created_at: string
   host?: User
   participants?: PlanParticipant[]
