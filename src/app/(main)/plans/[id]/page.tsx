@@ -1,305 +1,137 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { MapPin, Users, Calendar, Heart, ChevronLeft, Flag, Instagram } from 'lucide-react'
-import { TrustBadge } from '@/components/TrustBadge'
-import { LocationLink } from '@/components/LocationLink'
-import { BottomNav } from '@/components/BottomNav'
+import { Calendar, ChevronLeft, Heart, Info, Instagram, Users } from 'lucide-react'
 import Image from 'next/image'
+import { BottomNav } from '@/components/BottomNav'
+import { LocationLink } from '@/components/LocationLink'
+import { TrustBadge } from '@/components/TrustBadge'
 import type { Plan } from '@/lib/types'
 
 export default function PlanPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const [plan, setPlan] = useState<Plan & { host?: any } | null>(null)
+  const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(true)
   const [isJoined, setIsJoined] = useState(false)
-  const [isLiked, setIsLiked] = useState(false)
-  const [participantCount, setParticipantCount] = useState(0)
+  const [isSaved, setIsSaved] = useState(false)
+
+  const load = async () => {
+    setLoading(true)
+    const response = await fetch(`/api/plans/${params.id}`)
+    if (response.ok) {
+      const data = await response.json()
+      setPlan(data)
+      const mine = (data.participants || []).some((p: any) => p.user_id === data.current_user_id && p.status === 'joined')
+      setIsJoined(mine)
+    }
+
+    const favResp = await fetch('/api/favorites')
+    if (favResp.ok) {
+      const favs = await favResp.json()
+      setIsSaved((favs || []).some((p: Plan) => p.id === params.id))
+    }
+
+    setLoading(false)
+  }
 
   useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const response = await fetch(`/api/plans/${params.id}`)
-        if (!response.ok) throw new Error('Plan not found')
-        const data = await response.json()
-        setPlan(data)
-        setParticipantCount(data.participant_count || data.participants?.length || 0)
-      } catch (error) {
-        console.error('Failed to fetch plan:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPlan()
+    load()
   }, [params.id])
 
-  const handleJoinPlan = async () => {
-    try {
-      const response = await fetch(`/api/plans/${params.id}/join`, { method: 'POST' })
-      if (response.ok) {
-        setIsJoined(true)
-        setParticipantCount(prev => prev + 1)
-      } else {
-        alert('Failed to join plan')
-      }
-    } catch (error) {
-      console.error('Failed to join plan:', error)
-      alert('Failed to join plan')
+  const participantCount = useMemo(() => ((plan?.participants || []).filter((p: any) => p.status === 'joined').length || 0) + 1, [plan])
+  const isHost = (plan as any)?.current_user_id && (plan as any).current_user_id === plan.host_id
+
+  const join = async () => {
+    const resp = await fetch(`/api/plans/${params.id}/join`, { method: 'POST' })
+    if (resp.ok) {
+      setIsJoined(true)
+      load()
+    } else {
+      const err = await resp.json()
+      alert(err.error || 'Unable to join')
     }
   }
 
-  const handleLikePlan = () => {
-    setIsLiked(!isLiked)
+  const leave = async () => {
+    const resp = await fetch(`/api/plans/${params.id}/leave`, { method: 'POST' })
+    if (resp.ok) {
+      setIsJoined(false)
+      load()
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white pb-24">
-        <motion.div
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="h-96 bg-gray-200 w-full"
-        />
-      </div>
-    )
+  const toggleSave = async () => {
+    const method = isSaved ? 'DELETE' : 'POST'
+    const resp = await fetch(`/api/plans/${params.id}/favorite`, { method })
+    if (resp.ok) setIsSaved(!isSaved)
   }
 
-  if (!plan) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center pb-24">
-        <div className="text-6xl mb-4">404</div>
-        <h1 className="text-2xl font-bold mb-4">Plan not found</h1>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => router.back()}
-          className="px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold"
-        >
-          Go Back
-        </motion.button>
-      </div>
-    )
-  }
+  if (loading || !plan) return <div className="min-h-screen pb-24" />
 
   const planDate = new Date(plan.datetime)
-  const dateStr = planDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  const timeStr = planDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  const spotsLeft = Math.max(0, plan.max_people - participantCount)
-  const isFull = spotsLeft === 0
 
   return (
-    <div className="pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between p-4">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => router.back()}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </motion.button>
-        <h2 className="text-lg font-bold text-gray-900">Plan Details</h2>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700"
-        >
-          <Flag className="w-5 h-5" />
-        </motion.button>
+    <div className="pb-28">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b app-card p-3">
+        <button onClick={() => router.back()} className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center"><ChevronLeft className="h-4 w-4" /></button>
+        <p className="text-sm font-semibold">Plan</p>
+        <button onClick={toggleSave} className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center">
+          <Heart className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+        </button>
       </div>
 
-      {/* Hero Image */}
-      <div className="relative h-80 w-full bg-gradient-to-br from-purple-400 to-blue-500 overflow-hidden">
-        <Image
-          src={plan.image_url || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200'}
-          alt={plan.title}
-          fill
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className="relative h-72 w-full overflow-hidden">
+        <Image src={plan.image_url || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200'} alt={plan.title} fill className="object-cover" />
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-6 space-y-6">
-        {/* Title and Category */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-3"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <h1 className="text-3xl font-black text-gray-900 mb-2">{plan.title}</h1>
-              <div className="flex gap-2">
-                <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full capitalize">
-                  {plan.category}
-                </span>
-                {plan.female_only && (
-                  <span className="px-3 py-1 bg-pink-500 text-white text-xs font-bold rounded-full">
-                    👩 Women only
-                  </span>
-                )}
-              </div>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setIsLiked(!isLiked)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                isLiked
-                  ? 'bg-red-100'
-                  : 'bg-gray-100'
-              }`}
-            >
-              <Heart className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-            </motion.button>
-          </div>
-        </motion.div>
+      <div className="mx-auto max-w-md space-y-4 px-4 py-4">
+        <div>
+          <h1 className="text-xl font-bold">{plan.title}</h1>
+          <p className="text-sm app-muted">{plan.city || 'General'} · {plan.location_name}</p>
+        </div>
 
-        {/* Host Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-200"
-        >
-          <p className="text-sm text-gray-600 mb-3">Organized by</p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-lg font-bold">
-                {plan.host?.name?.charAt(0) || 'H'}
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">{plan.host?.name || 'Host'} {plan.host?.instagram_handle && <Instagram className="w-4 h-4 text-pink-500" />}</h3>
-                <TrustBadge score={plan.host?.reliability_score ?? 100} />
-              </div>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 rounded-lg bg-white border border-gray-200 font-semibold text-sm hover:bg-gray-50"
-            >
-              Message
-            </motion.button>
+        <div className="rounded-2xl border app-card p-3 text-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-semibold">Organizer</span>
+            <TrustBadge score={plan.host?.reliability_score ?? 100} />
           </div>
-        </motion.div>
+          <p className="font-medium">{plan.host?.name || 'Host'}</p>
+          {plan.host?.instagram_url && (
+            <a href={plan.host.instagram_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-pink-500 text-xs">
+              <Instagram className="h-3 w-3" /> Instagram profile
+            </a>
+          )}
+        </div>
 
-        {/* Details Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 gap-3"
-        >
-          {/* Date/Time */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <span className="text-xs font-semibold text-blue-900">When</span>
-            </div>
-            <p className="font-bold text-gray-900">{dateStr}</p>
-            <p className="text-sm text-gray-600">{timeStr}</p>
-          </div>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="rounded-xl border app-card p-3"><p className="inline-flex items-center gap-1"><Calendar className="h-4 w-4" /> {planDate.toLocaleString()}</p></div>
+          <div className="rounded-xl border app-card p-3"><p className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {participantCount}/{plan.max_people}</p></div>
+          <div className="rounded-xl border app-card p-3"><LocationLink location={plan.location_name} googleMapsLink={plan.google_maps_link} /></div>
+          <div className="rounded-xl border app-card p-3"><p className="inline-flex items-center gap-1"><Info className="h-4 w-4" /> Host included in count</p></div>
+        </div>
 
-          {/* Location */}
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="w-5 h-5 text-red-600" />
-              <span className="text-xs font-semibold text-red-900">Where</span>
-            </div>
-            <LocationLink location={plan.location_name} googleMapsLink={plan.google_maps_link} />
-          </div>
-
-          {/* Participants */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-5 h-5 text-green-600" />
-              <span className="text-xs font-semibold text-green-900">Participants</span>
-            </div>
-            <p className="font-bold text-gray-900">{participantCount}/{plan.max_people}</p>
-            <p className="text-sm text-gray-600">{spotsLeft} spots left</p>
-          </div>
-
-          {/* Cost */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg">💰</span>
-              <span className="text-xs font-semibold text-purple-900">Est. Cost</span>
-            </div>
-            <p className="font-bold text-gray-900">₹500-1000</p>
-            <p className="text-sm text-gray-600">Per person</p>
-          </div>
-        </motion.div>
-
-        {/* Description */}
-        {plan.description && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-gray-50 rounded-xl p-4 border border-gray-200"
-          >
-            <h3 className="font-bold text-gray-900 mb-2">About</h3>
-            <p className="text-gray-700 leading-relaxed">{plan.description}</p>
-          </motion.div>
+        {plan.show_payment_options && plan.host?.gpay_link && (
+          <a href={plan.host.gpay_link} target="_blank" rel="noreferrer" className="block rounded-xl border app-card p-3 text-sm font-medium">
+            Pay organizer (GPay)
+          </a>
         )}
 
-        {/* Participants List */}
-        {plan.participants && plan.participants.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gray-50 rounded-xl p-4 border border-gray-200"
-          >
-            <h3 className="font-bold text-gray-900 mb-4">Going ({plan.participants?.length || 0})</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {(plan.participants || []).slice(0, 4).map((p, i) => (
-                <div key={i} className="flex items-center gap-2 bg-white rounded-lg p-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold">
-                    {p?.user?.name?.charAt(0) || 'U'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{p?.user?.name || 'Unknown'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+        {plan.whatsapp_link && (
+          <a href={plan.whatsapp_link} target="_blank" rel="noreferrer" className="block rounded-xl bg-green-500 px-4 py-3 text-center text-sm font-semibold text-white">
+            Open WhatsApp group
+          </a>
         )}
-      </div>
 
-      {/* Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-24 max-w-2xl mx-auto">
-        <div className="flex gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex-1 px-4 py-3 rounded-xl border-2 border-blue-500 text-blue-600 font-bold text-lg hover:bg-blue-50 transition-colors"
-          >
-            <MessageCircle className="w-5 h-5 inline mr-2" />
-            Chat
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleJoinPlan}
-            disabled={isFull || isJoined}
-            className={`flex-1 px-4 py-3 rounded-xl font-bold text-lg transition-all text-white ${
-              isJoined
-                ? 'bg-green-500 hover:bg-green-600'
-                : isFull
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg'
-            }`}
-          >
-            {isJoined ? '✓ Joining' : isFull ? 'Plan Full' : `Join Plan`}
-          </motion.button>
+        <div className="grid grid-cols-2 gap-2">
+          {isHost ? (
+            <button disabled className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold app-muted">You are the organizer</button>
+          ) : !isJoined ? (
+            <button onClick={join} className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white">Join plan</button>
+          ) : (
+            <button onClick={leave} className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold">Leave anytime</button>
+          )}
+          <button onClick={() => router.push('/feed')} className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold">Back to feed</button>
         </div>
       </div>
 

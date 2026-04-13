@@ -3,14 +3,16 @@ import Link from 'next/link'
 import { Plan } from '@/lib/types'
 import { TrustBadge } from './TrustBadge'
 import { AvatarStack } from './AvatarStack'
-import { MapPin, Users, Calendar, Clock, ChevronRight, Instagram } from 'lucide-react'
+import { MapPin, Users, Calendar, Clock, ChevronRight, Instagram, Info } from 'lucide-react'
 import { CATEGORY_META } from '@/lib/categories'
 import { LocationLink } from './LocationLink'
+import { CategoryIcon } from './CategoryIcon'
 
 export function PlanCard({ plan }: { plan: Plan }) {
   if (!plan) return null
 
-  const participantCount = plan.participant_count || plan.participants?.length || 0
+  const joinedParticipants = (plan.participant_count || plan.participants?.length || 0)
+  const participantCount = joinedParticipants + 1
   const spotsLeft = Math.max(0, (plan.max_people || 10) - participantCount)
   const planDate = plan.datetime ? new Date(plan.datetime) : new Date()
   const dateStr = planDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -29,8 +31,8 @@ export function PlanCard({ plan }: { plan: Plan }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
-        <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold">
-          {category.icon} {category.label}
+        <div className="absolute left-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white inline-flex items-center gap-1">
+          <CategoryIcon icon={category.icon} className="h-3 w-3" /> {category.label}
         </div>
         <div className="absolute right-3 top-3 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white">
           {spotsLeft} spots left
@@ -39,7 +41,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
           <h3 className="text-xl font-black line-clamp-1">{plan.title}</h3>
           <div className="mt-1 flex items-center gap-2 text-xs text-white/90">
             <MapPin className="h-3 w-3" />
-            <span className="line-clamp-1">{plan.location_name}</span>
+            <span className="line-clamp-1">{plan.city || 'General'} · {plan.location_name}</span>
           </div>
         </div>
       </div>
@@ -48,7 +50,11 @@ export function PlanCard({ plan }: { plan: Plan }) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">{plan.host?.name || 'Host'}</span>
-            {plan.host?.instagram_handle && <Instagram className="h-4 w-4 text-pink-500" />}
+            {plan.host?.instagram_url && (
+              <button type="button" className="text-pink-500" onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(plan.host?.instagram_url || '', '_blank'); }}>
+                <Instagram className="h-4 w-4" />
+              </button>
+            )}
             <TrustBadge score={plan.host?.reliability_score ?? 100} />
           </div>
           <ChevronRight className="h-4 w-4 app-muted" />
@@ -59,6 +65,8 @@ export function PlanCard({ plan }: { plan: Plan }) {
           <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {timeStr}</span>
           <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {participantCount}/{plan.max_people}</span>
         </div>
+
+        <p className="text-[11px] app-muted inline-flex items-center gap-1"><Info className="h-3 w-3" /> Host is included in participant count</p>
 
         <LocationLink location={plan.location_name} googleMapsLink={plan.google_maps_link} />
 

@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     description: body.description ?? null,
     category: body.category ?? 'other',
     location_name: body.location_name,
+    city: body.city || 'General',
     datetime: body.datetime,
     max_people: Number(body.max_people || 8),
     whatsapp_link: body.whatsapp_link || '',
@@ -31,13 +32,15 @@ export async function POST(request: Request) {
     female_only: !!body.female_only,
     image_url: body.image_url || null,
     google_maps_link: body.google_maps_link || null,
+    show_payment_options: !!body.show_payment_options,
+    estimated_cost: body.estimated_cost ? Number(body.estimated_cost) : null,
   }
 
   let { data, error } = await supabase.from('plans').insert(payload).select().single()
 
-  // Backward compatibility if DB is missing google_maps_link column
-  if (error?.message?.includes('google_maps_link')) {
-    const { google_maps_link, ...fallbackPayload } = payload
+  // Backward compatibility if DB migrations are partially applied
+  if (error && /(google_maps_link|city|show_payment_options|estimated_cost)/.test(error.message)) {
+    const { google_maps_link, city, show_payment_options, estimated_cost, ...fallbackPayload } = payload
     const retry = await supabase.from('plans').insert(fallbackPayload).select().single()
     data = retry.data
     error = retry.error

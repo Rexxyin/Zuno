@@ -54,7 +54,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <ChevronLeft className="h-4 w-4" />
         </button>
         <p className="text-sm font-semibold">Profile</p>
-<div className="h-8 w-8" />
+        <div className="h-8 w-8" />
       </div>
 
       <div className="mx-auto max-w-md space-y-4 px-4 py-5">
@@ -63,10 +63,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             {user.name?.charAt(0) || 'U'}
           </div>
           <h1 className="text-lg font-semibold">{user.name}</h1>
-          {user.instagram_handle && (
-            <p className="mt-1 inline-flex items-center gap-1 text-xs text-pink-500">
-              <Instagram className="h-3 w-3" /> {user.instagram_handle}
-            </p>
+          {user.instagram_url && (
+            <a href={user.instagram_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-pink-500">
+              <Instagram className="h-3 w-3" /> Instagram
+            </a>
+          )}
+          {user.gpay_link && (
+            <a href={user.gpay_link} target="_blank" rel="noreferrer" className="mt-1 block text-xs text-emerald-500">GPay available</a>
           )}
           <div className="mt-3 flex justify-center">
             <TrustBadge score={user.reliability_score} />

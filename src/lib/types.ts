@@ -3,6 +3,8 @@ export interface User {
   name: string
   avatar_url: string | null
   instagram_handle: string | null
+  instagram_url?: string | null
+  gpay_link?: string | null
   phone_verified: boolean
   reliability_score: number
   total_joined: number
@@ -20,6 +22,7 @@ export interface Plan {
   title: string
   description: string | null
   location_name: string
+  city?: string | null
   datetime: string
   max_people: number
   whatsapp_link: string | null
@@ -29,6 +32,7 @@ export interface Plan {
   status: PlanStatus
   approval_mode: boolean
   female_only: boolean
+  show_payment_options?: boolean
   estimated_cost?: number | null
   participant_count?: number
   created_at: string
