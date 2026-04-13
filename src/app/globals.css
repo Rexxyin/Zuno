@@ -3,27 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --purple: #534AB7;
-  --purple-light: #EEEDFE;
-  --teal: #1D9E75;
-  --teal-light: #E1F5EE;
-  --coral: #D85A30;
-  --coral-light: #FAECE7;
-  --amber: #BA7517;
-  --amber-light: #FAEEDA;
-  --pink: #D4537E;
-  --pink-light: #FBEAF0;
-  --dark: #1A1A1A;
-  --muted: #6B6B6B;
-  --border: #E0DED6;
-  --bg: #FAFAF8;
-  --card: #FFFFFF;
-  --radius-card: 16px;
-  --radius-btn: 100px;
-  --radius-sm: 8px;
+  --bg: #f4f1ea;
+  --surface: #fffcf6;
+  --card: #ffffff;
+  --text: #18181b;
+  --muted: #66606f;
+  --line: #e9e3d7;
+  --brand: #ff7d45;
+  --brand-2: #6d5efc;
+}
+
+:root[data-theme='dark'] {
+  --bg: #121216;
+  --surface: #181821;
+  --card: #20212c;
+  --text: #f5f5f7;
+  --muted: #b5b4c4;
+  --line: #2f3041;
+  --brand: #ff9d64;
+  --brand-2: #9389ff;
 }
 
 body {
-  background: var(--bg);
-  color: var(--dark);
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--brand) 14%, transparent), transparent 45%), var(--bg);
+  color: var(--text);
+}
+
+@layer utilities {
+  .app-surface {
+    background: var(--surface);
+  }
+
+  .app-card {
+    background: var(--card);
+    border-color: var(--line);
+  }
+
+  .app-muted {
+    color: var(--muted);
+  }
 }

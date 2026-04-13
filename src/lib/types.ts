@@ -24,6 +24,7 @@ export interface Plan {
   max_people: number
   whatsapp_link: string | null
   image_url: string | null
+  google_maps_link?: string | null
   category: PlanCategory
   status: PlanStatus
   approval_mode: boolean

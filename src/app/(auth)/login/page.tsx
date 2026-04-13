@@ -28,6 +28,21 @@ export default function LoginPage() {
     }
   }
 
+
+  const handlePhoneSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signInWithOtp({ phone })
+      if (error) alert(error.message)
+      else alert('OTP sent! Check your messages.')
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -193,6 +208,7 @@ export default function LoginPage() {
         {/* Phone Sign In Form */}
         {mode === 'phone' && (
           <motion.form
+            onSubmit={handlePhoneSignIn}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

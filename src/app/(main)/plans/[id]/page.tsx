@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { MapPin, Users, Calendar, MessageCircle, Share2, Heart, ChevronLeft, Flag } from 'lucide-react'
+import { MapPin, Users, Calendar, Heart, ChevronLeft, Flag, Instagram } from 'lucide-react'
 import { TrustBadge } from '@/components/TrustBadge'
 import { LocationLink } from '@/components/LocationLink'
 import { BottomNav } from '@/components/BottomNav'
@@ -174,7 +174,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
                 {plan.host?.name?.charAt(0) || 'H'}
               </div>
               <div>
-                <h3 className="font-bold text-gray-900">{plan.host?.name || 'Host'}</h3>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">{plan.host?.name || 'Host'} {plan.host?.instagram_handle && <Instagram className="w-4 h-4 text-pink-500" />}</h3>
                 <TrustBadge score={plan.host?.reliability_score ?? 100} />
               </div>
             </div>
@@ -211,7 +211,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
               <MapPin className="w-5 h-5 text-red-600" />
               <span className="text-xs font-semibold text-red-900">Where</span>
             </div>
-            <p className="font-bold text-gray-900 line-clamp-2">{plan.location_name}</p>
+            <LocationLink location={plan.location_name} googleMapsLink={plan.google_maps_link} />
           </div>
 
           {/* Participants */}
