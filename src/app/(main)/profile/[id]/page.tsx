@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Instagram, ShieldCheck } from 'lucide-react'
 import { TrustBadge } from '@/components/TrustBadge'
@@ -8,12 +8,13 @@ import { BottomNav } from '@/components/BottomNav'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
+export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const supabase = createClient()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const isOwnProfile = params.id === 'me'
+  const isOwnProfile = id === 'me'
 
   useEffect(() => {
     const load = async () => {
@@ -28,14 +29,14 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         return
       }
 
-      const targetId = isOwnProfile ? authUser.id : params.id
+      const targetId = isOwnProfile ? authUser.id : id
       const { data } = await supabase.from('users').select('*').eq('id', targetId).single()
       setUser(data)
       setLoading(false)
     }
 
     load()
-  }, [params.id, isOwnProfile, router, supabase])
+  }, [id, isOwnProfile, router, supabase])
 
   if (loading) return <div className="min-h-screen pb-24" />
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {  Users, Calendar, Heart, ChevronLeft, Info, Instagram } from 'lucide-react'
 import Image from 'next/image'
@@ -9,7 +9,8 @@ import { LocationLink } from '@/components/LocationLink'
 import { TrustBadge } from '@/components/TrustBadge'
 import type { Plan } from '@/lib/types'
 
-export default function PlanPage({ params }: { params: { id: string } }) {
+export default function PlanPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(true)
@@ -19,7 +20,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
 
   const load = async () => {
     setLoading(true)
-    const response = await fetch(`/api/plans/${params.id}`)
+    const response = await fetch(`/api/plans/${id}`)
     if (response.ok) {
       const data = await response.json()
       setPlan(data)
@@ -34,7 +35,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
     const favResp = await fetch('/api/favorites')
     if (favResp.ok) {
       const favs = await favResp.json()
-      setIsSaved((favs || []).some((p: Plan) => p.id === params.id))
+      setIsSaved((favs || []).some((p: Plan) => p.id === id))
     }
 
     setLoading(false)
@@ -42,13 +43,13 @@ export default function PlanPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     load()
-  }, [params.id])
+  }, [id])
 
   const participantCount = useMemo(() => ((plan?.participants || []).filter((p: any) => p.status === 'joined').length || 0) + 1, [plan])
   const isHost = (plan as any)?.current_user_id && (plan as any).current_user_id === plan?.host_id
 
   const join = async () => {
-    const resp = await fetch(`/api/plans/${params.id}/join`, { method: 'POST' })
+    const resp = await fetch(`/api/plans/${id}/join`, { method: 'POST' })
     if (resp.ok) {
       setIsJoined(true)
       load()
@@ -59,7 +60,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
   }
 
   const leave = async () => {
-    const resp = await fetch(`/api/plans/${params.id}/leave`, { method: 'POST' })
+    const resp = await fetch(`/api/plans/${id}/leave`, { method: 'POST' })
     if (resp.ok) {
       setIsJoined(false)
       load()
@@ -68,7 +69,7 @@ export default function PlanPage({ params }: { params: { id: string } }) {
 
   const toggleSave = async () => {
     const method = isSaved ? 'DELETE' : 'POST'
-    const resp = await fetch(`/api/plans/${params.id}/favorite`, { method })
+    const resp = await fetch(`/api/plans/${id}/favorite`, { method })
     if (resp.ok) setIsSaved(!isSaved)
   }
 
