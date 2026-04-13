@@ -76,8 +76,8 @@ export function LoginForm() {
         >
           🔥
         </motion.div>
-        <h1 className="text-4xl font-black text-white mb-2">Zuno</h1>
-        <p className="text-white/80 font-medium">Join & Create Plans with Friends</p>
+        <h1 className="text-4xl font-black text-gray-900 mb-2">Zuno</h1>
+        <p className="text-gray-600 font-medium">Join & Create Plans with Friends</p>
       </motion.div>
 
       {/* Auth Mode Selector */}
@@ -148,38 +148,38 @@ export function LoginForm() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           onSubmit={handleEmailSignIn}
-          className="space-y-4 bg-white/10 backdrop-blur-md p-8 rounded-2xl border border-white/20"
+          className="space-y-4 bg-white border border-gray-200 p-8 rounded-lg shadow-sm"
         >
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             type="button"
             onClick={() => setMode('auth')}
-            className="text-white/80 hover:text-white text-sm mb-4"
+            className="text-gray-600 hover:text-gray-900 text-sm mb-4"
           >
             ← Back
           </motion.button>
 
           <div className="space-y-2">
-            <label className="block text-white font-semibold text-sm">Email</label>
+            <label className="block text-gray-900 font-semibold text-sm">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
+              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-white font-semibold text-sm">Password</label>
+            <label className="block text-gray-900 font-semibold text-sm">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
+              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
               required
             />
           </div>
@@ -189,13 +189,13 @@ export function LoginForm() {
             whileTap={{ scale: 0.95 }}
             type="submit"
             disabled={loading}
-            className="w-full px-6 py-4 bg-white text-blue-600 font-bold rounded-2xl hover:shadow-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? 'Signing in...' : <>Sign In <ArrowRight className="w-4 h-4" /></>}
           </motion.button>
 
-          <p className="text-white/70 text-sm text-center">
-            Don't have an account? <span className="text-white font-bold cursor-pointer hover:underline">Sign up</span>
+          <p className="text-gray-600 text-sm text-center">
+            Don't have an account? <span className="text-gray-900 font-semibold cursor-pointer hover:underline">Sign up</span>
           </p>
         </motion.form>
       )}
@@ -207,26 +207,26 @@ export function LoginForm() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="space-y-4 bg-white/10 backdrop-blur-md p-8 rounded-2xl border border-white/20"
+          className="space-y-4 bg-white border border-gray-200 p-8 rounded-lg shadow-sm"
         >
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             type="button"
             onClick={() => setMode('auth')}
-            className="text-white/80 hover:text-white text-sm mb-4"
+            className="text-gray-600 hover:text-gray-900 text-sm mb-4"
           >
             ← Back
           </motion.button>
 
           <div className="space-y-2">
-            <label className="block text-white font-semibold text-sm">Phone Number</label>
+            <label className="block text-gray-900 font-semibold text-sm">Phone Number</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210"
-              className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
+              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition-all"
               required
             />
           </div>
@@ -236,7 +236,7 @@ export function LoginForm() {
             whileTap={{ scale: 0.95 }}
             type="submit"
             disabled={loading}
-            className="w-full px-6 py-4 bg-white text-blue-600 font-bold rounded-2xl hover:shadow-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? 'Sending OTP...' : <>Send OTP <ArrowRight className="w-4 h-4" /></>}
           </motion.button>
@@ -248,9 +248,9 @@ export function LoginForm() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="text-center mt-8 text-white/70 text-sm"
+        className="text-center mt-8 text-gray-600 text-sm"
       >
-        <p>By signing in, you agree to our <span className="text-white hover:underline cursor-pointer">Terms of Service</span></p>
+        <p>By signing in, you agree to our <span className="text-gray-900 hover:underline cursor-pointer">Terms of Service</span></p>
       </motion.div>
     </div>
   )

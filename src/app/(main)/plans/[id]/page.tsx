@@ -47,6 +47,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
   const participantCount = useMemo(() => ((plan?.participants || []).filter((p: any) => p.status === 'joined').length || 0) + 1, [plan])
   const isHost = (plan as any)?.current_user_id && (plan as any).current_user_id === plan?.host_id
+  const isExpired = useMemo(() => plan && new Date(plan.datetime) < new Date(), [plan])
 
   const join = async () => {
     const resp = await fetch(`/api/plans/${id}/join`, { method: 'POST' })
@@ -102,8 +103,13 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
       <div className="mx-auto max-w-md space-y-4 px-4 py-4">
         <div>
-          <h1 className="text-xl font-bold">{plan.title}</h1>
-          <p className="text-sm app-muted">{plan.city || 'General'} · {plan.location_name}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-xl font-bold">{plan.title}</h1>
+            {isExpired && (
+              <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded-full">Expired</span>
+            )}
+          </div>
+          <p className="text-sm app-muted">{plan.location_name}</p>
         </div>
 
         <div className="rounded-2xl border app-card p-3 text-sm">
@@ -139,7 +145,9 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          {isHost ? (
+          {isExpired ? (
+            <button disabled className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 cursor-not-allowed opacity-50">This plan has ended</button>
+          ) : isHost ? (
             <button disabled className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold app-muted">You are the organizer</button>
           ) : !isJoined ? (
             <button onClick={join} className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white">Join plan</button>
