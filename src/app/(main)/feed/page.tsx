@@ -1,145 +1,130 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
-import { motion } from 'framer-motion'
-import { Search, Flame } from 'lucide-react'
-import type { Plan } from '@/lib/types'
+import { Search, Clock3, MapPin } from 'lucide-react'
+import type { Plan, PlanCategory } from '@/lib/types'
+import { CATEGORY_META } from '@/lib/categories'
+import { CategoryIcon } from '@/components/CategoryIcon'
+import { DEFAULT_LAUNCH_CITY, INDIA_HIGH_POTENTIAL_CITIES } from '@/lib/cities'
 
 export default function FeedPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<PlanCategory | null>(null)
+  const [selectedCity, setSelectedCity] = useState<string>(DEFAULT_LAUNCH_CITY)
+  const [query, setQuery] = useState('')
+
+  const fetchPlans = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/plans')
+      const data = await response.json()
+      setPlans(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Failed to fetch plans:', error)
+      setPlans([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/plans')
-        if (!response.ok) throw new Error(`API error: ${response.status}`)
-        const data = await response.json()
-        // Ensure data is always an array
-        const plansArray = Array.isArray(data) ? data : (data?.data && Array.isArray(data.data) ? data.data : [])
-        setPlans(plansArray)
-      } catch (error) {
-        console.error('Failed to fetch plans:', error)
-        setPlans([]) // Fallback to empty array on error
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchPlans()
   }, [])
 
-  const categories = ['hiking', 'food', 'music', 'cycling', 'art', 'travel', 'sports', 'other']
-  // Ensure plans is always an array before filtering
-  const plansArray = Array.isArray(plans) ? plans : []
-  const filteredPlans = selectedCategory
-    ? plansArray.filter(p => p.category === selectedCategory)
-    : plansArray
+  const categories = Object.keys(CATEGORY_META) as PlanCategory[]
+
+  const filteredPlans = useMemo(
+    () =>
+      plans
+        .filter((p) => (selectedCategory ? p.category === selectedCategory : true))
+        .filter((p) => {
+          const city = (p.city || '').toLowerCase().trim()
+          const target = selectedCity.toLowerCase()
+          return city === target
+        })
+        .filter((p) => {
+          const hay = `${p.title} ${p.description || ''} ${p.location_name}`.toLowerCase()
+          return hay.includes(query.toLowerCase())
+        })
+        .sort((a, b) => +new Date(a.datetime) - +new Date(b.datetime)),
+    [plans, selectedCategory, selectedCity, query]
+  )
+
+  const nextPlan = filteredPlans.find((p) => +new Date(p.datetime) > Date.now())
+  const minutesToNext = nextPlan ? Math.max(1, Math.round((+new Date(nextPlan.datetime) - Date.now()) / 60000)) : null
+
+  const toggleFavorite = async (plan: Plan) => {
+    const method = plan.is_favorite ? 'DELETE' : 'POST'
+    const res = await fetch(`/api/plans/${plan.id}/favorite`, { method })
+    if (res.ok) {
+      setPlans((prev) => prev.map((p) => (p.id === plan.id ? { ...p, is_favorite: !p.is_favorite } : p)))
+    }
+  }
 
   return (
     <div className="pb-24 pt-2">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Flame className="w-6 h-6 text-orange-500" />
-              </motion.div>
-              <h1 className="text-2xl font-black text-gray-900">Discover</h1>
+      <div className="sticky top-0 z-10 border-b app-card backdrop-blur-md">
+        <div className="mx-auto max-w-md px-4 py-3">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] app-muted">Zuno</p>
+              <h1 className="text-lg font-bold">Discover</h1>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-            >
-              <Search className="w-5 h-5 text-gray-700" />
-            </motion.button>
           </div>
 
-          {/* Category Filter */}
-          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-            <div className="flex gap-2 pb-1">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedCategory(null)}
-                className={`px-3 py-1.5 rounded-full font-semibold text-xs whitespace-nowrap transition-all ${
-                  selectedCategory === null
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All
-              </motion.button>
-              {categories.map((cat) => (
-                <motion.button
-                  key={cat}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full font-semibold text-xs whitespace-nowrap transition-all capitalize ${
-                    selectedCategory === cat
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {cat}
-                </motion.button>
-              ))}
+          <div className="mb-2 flex items-center gap-2">
+            <div className="rounded-xl border app-card px-2 py-1.5 flex-1">
+              <label className="inline-flex w-full items-center gap-2 text-xs app-muted">
+                <MapPin className="h-3.5 w-3.5" />
+                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-transparent text-sm font-medium outline-none">
+                  {INDIA_HIGH_POTENTIAL_CITIES.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </label>
             </div>
+            <div className="rounded-xl border app-card px-2 py-1.5 flex-1 inline-flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 app-muted" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className="w-full bg-transparent text-sm outline-none" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <button onClick={() => setSelectedCategory(null)} className={`px-2.5 py-1 rounded-full text-[11px] font-medium border ${selectedCategory === null ? 'bg-black text-white' : 'app-card'}`}>All Activities</button>
+            {categories.map((cat) => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-2.5 py-1 rounded-full text-[11px] font-medium border inline-flex items-center gap-1 ${selectedCategory === cat ? 'bg-orange-500 text-white border-orange-500' : 'app-card'}`}>
+                <CategoryIcon icon={CATEGORY_META[cat].icon} className="h-3 w-3" /> {CATEGORY_META[cat].label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="mx-auto max-w-md px-4 py-4">
+        {nextPlan && minutesToNext && (
+          <div className="mb-3 rounded-2xl border app-card p-3 text-xs app-muted">
+            <p className="inline-flex items-center gap-1 font-semibold"><Clock3 className="h-3 w-3" /> Happening next in {minutesToNext} min</p>
+            <p className="mt-1 text-sm font-medium">{nextPlan.title}</p>
+          </div>
+        )}
+
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <motion.div
-                key={i}
-                animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="h-72 bg-gradient-to-r from-gray-200 to-gray-300 rounded-2xl"
-              />
+          <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-64 rounded-3xl app-card border" />)}</div>
+        ) : filteredPlans.length === 0 ? (
+          <div className="py-12 text-center">
+            <h3 className="mb-1 text-base font-semibold">No plans in {selectedCity}</h3>
+            <p className="mb-5 text-sm app-muted">Create one for this city now.</p>
+            <a href="/plans/create" className="inline-block rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2 text-sm font-semibold text-white">Create Plan</a>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {filteredPlans.map((plan) => (
+              <PlanCard key={plan.id} plan={plan} onToggleFavorite={() => toggleFavorite(plan)} />
             ))}
           </div>
-        ) : filteredPlans.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12"
-          >
-            <div className="text-4xl mb-3">🎯</div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">No plans found</h3>
-            <p className="text-sm text-gray-600 mb-6">Try another category or create the first plan</p>
-            <motion.a
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              href="/plans/create"
-              className="inline-block bg-blue-500 text-white font-semibold px-5 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm"
-            >
-              Create Plan
-            </motion.a>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 gap-4"
-          >
-            {filteredPlans.map((plan) => (
-              <PlanCard key={plan.id} plan={plan} />
-            ))}
-          </motion.div>
         )}
       </div>
 

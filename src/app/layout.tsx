@@ -14,11 +14,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#000000" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+              const saved = localStorage.getItem('zuno-theme');
+              const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+              document.documentElement.setAttribute('data-theme', theme);
+            })();`,
+          }}
+        />
       </head>
-      <body className={`${inter.className} bg-gradient-to-b from-gray-50 to-white`}>
+      <body className={`${inter.className}`}>
         <main className="min-h-screen">{children}</main>
       </body>
     </html>

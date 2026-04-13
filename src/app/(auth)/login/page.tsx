@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
-import { Mail, Phone, Lock, ArrowRight } from 'lucide-react'
+import { Mail, Phone, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createClient()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
@@ -19,10 +22,25 @@ export default function LoginPage() {
       const origin = window.location.origin
       await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${origin}/auth/callback` }
+        options: { redirectTo: `${origin}/auth/callback?next=${searchParams.get('next') || '/feed'}` }
       })
     } catch (error) {
       console.error('Error signing in:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+  const handlePhoneSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signInWithOtp({ phone })
+      if (error) alert(error.message)
+      else alert('OTP sent! Check your messages.')
+    } catch (error) {
+      console.error('Error:', error)
     } finally {
       setLoading(false)
     }
@@ -37,6 +55,7 @@ export default function LoginPage() {
         password
       })
       if (error) alert(error.message)
+      else router.push(searchParams.get('next') || '/feed')
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -193,6 +212,7 @@ export default function LoginPage() {
         {/* Phone Sign In Form */}
         {mode === 'phone' && (
           <motion.form
+            onSubmit={handlePhoneSignIn}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
