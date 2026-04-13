@@ -10,7 +10,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('plan_favorites')
-    .select('plan:plans(*, host:users(*))')
+    .select('plan:plans(*, host:users!plans_host_id_fkey(*))')
     .eq('user_id', auth.user.id)
     .order('created_at', { ascending: false })
 

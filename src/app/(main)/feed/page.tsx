@@ -8,20 +8,20 @@ import type { Plan, PlanCategory } from '@/lib/types'
 import { CATEGORY_META } from '@/lib/categories'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { CategoryIcon } from '@/components/CategoryIcon'
-import { DEFAULT_LAUNCH_CITY, INDIA_HIGH_POTENTIAL_CITIES } from '@/lib/cities'
+import { DEFAULT_LAUNCH_CITY } from '@/lib/cities'
 
 export default function FeedPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<PlanCategory | null>(null)
   const [selectedCity, setSelectedCity] = useState<string>(DEFAULT_LAUNCH_CITY)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         setLoading(true)
         const response = await fetch('/api/plans')
-        if (!response.ok) throw new Error(`API error: ${response.status}`)
         const data = await response.json()
         setPlans(Array.isArray(data) ? data : [])
       } catch (error) {
@@ -36,26 +36,29 @@ export default function FeedPage() {
   }, [])
 
   const categories = Object.keys(CATEGORY_META) as PlanCategory[]
-  const citiesWithPlans = useMemo(() => Array.from(new Set(plans.map((p) => p.city).filter(Boolean))) as string[], [plans])
+  const cities = useMemo(() => Array.from(new Set(plans.map((p) => p.city).filter(Boolean))) as string[], [plans])
 
   useEffect(() => {
-    if (!plans.length) return
-    const hasCurrentCityPlans = plans.some((p) => (p.city || '').toLowerCase() === selectedCity.toLowerCase())
-    if (!hasCurrentCityPlans && citiesWithPlans.length) setSelectedCity(citiesWithPlans[0])
-  }, [plans, selectedCity, citiesWithPlans])
+    if (!cities.length) return
+    if (!cities.includes(selectedCity)) setSelectedCity(cities[0])
+  }, [cities, selectedCity])
 
   const filteredPlans = plans
     .filter((p) => (selectedCategory ? p.category === selectedCategory : true))
     .filter((p) => {
+      if (!selectedCity) return true
       const city = (p.city || '').toLowerCase().trim()
       const location = (p.location_name || '').toLowerCase()
       const target = selectedCity.toLowerCase()
       return city === target || location.includes(target)
     })
+    .filter((p) => {
+      const hay = `${p.title} ${p.description || ''} ${p.location_name}`.toLowerCase()
+      return hay.includes(query.toLowerCase())
+    })
     .sort((a, b) => +new Date(a.datetime) - +new Date(b.datetime))
 
-  const displayPlans = filteredPlans.length ? filteredPlans : [...plans].sort((a, b) => +new Date(a.datetime) - +new Date(b.datetime))
-  const nextPlan = displayPlans.find((p) => +new Date(p.datetime) > Date.now())
+  const nextPlan = filteredPlans.find((p) => +new Date(p.datetime) > Date.now())
 
   return (
     <div className="pb-24 pt-2">
@@ -64,14 +67,9 @@ export default function FeedPage() {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] uppercase tracking-[0.22em] app-muted">Zuno</p>
-              <h1 className="text-lg font-bold">Fast join feed</h1>
+              <h1 className="text-lg font-bold">Discover</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="h-8 w-8 rounded-full border app-card inline-flex items-center justify-center">
-                <Search className="h-3.5 w-3.5" />
-              </button>
-              <ThemeToggle />
-            </div>
+            <ThemeToggle />
           </div>
 
           <div className="mb-2 rounded-xl border app-card px-2 py-1.5">
@@ -79,11 +77,16 @@ export default function FeedPage() {
               <MapPin className="h-3.5 w-3.5" />
               <span>City:</span>
               <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-transparent text-sm font-medium outline-none">
-                {INDIA_HIGH_POTENTIAL_CITIES.map((city) => (
+                {cities.map((city) => (
                   <option key={city} value={city}>{city}</option>
                 ))}
               </select>
             </label>
+          </div>
+
+          <div className="mb-2 rounded-xl border app-card px-2 py-1.5 inline-flex w-full items-center gap-2">
+            <Search className="h-3.5 w-3.5 app-muted" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search plans" className="w-full bg-transparent text-sm outline-none" />
           </div>
 
           <div className="flex flex-wrap gap-1.5">
@@ -104,16 +107,17 @@ export default function FeedPage() {
             <p className="mt-1 text-sm font-medium">{nextPlan.title} · {new Date(nextPlan.datetime).toLocaleString()}</p>
           </div>
         )}
+
         {loading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-64 rounded-3xl app-card border" />)}</div>
-        ) : displayPlans.length === 0 ? (
+        ) : filteredPlans.length === 0 ? (
           <div className="py-12 text-center">
-            <h3 className="mb-1 text-base font-semibold">No plans yet in {selectedCity}</h3>
-            <p className="mb-5 text-sm app-muted">Create first plan to activate this city cluster.</p>
+            <h3 className="mb-1 text-base font-semibold">No plans found</h3>
+            <p className="mb-5 text-sm app-muted">Try different city/filter/search.</p>
             <a href="/plans/create" className="inline-block rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2 text-sm font-semibold text-white">Create Plan</a>
           </div>
         ) : (
-          <div className="grid gap-3">{displayPlans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}</div>
+          <div className="grid gap-3">{filteredPlans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}</div>
         )}
       </div>
 

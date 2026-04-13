@@ -5,7 +5,12 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
-  const { data, error } = await supabase.from('plans').select('*, host:users(*)').order('datetime', { ascending: true }).limit(20)
+  const { data, error } = await supabase
+    .from('plans')
+    .select('*, host:users!plans_host_id_fkey(*)')
+    .order('datetime', { ascending: true })
+    .limit(50)
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
@@ -38,7 +43,6 @@ export async function POST(request: Request) {
 
   let { data, error } = await supabase.from('plans').insert(payload).select().single()
 
-  // Backward compatibility if DB migrations are partially applied
   if (error && /(google_maps_link|city|show_payment_options|estimated_cost)/.test(error.message)) {
     const { google_maps_link, city, show_payment_options, estimated_cost, ...fallbackPayload } = payload
     const retry = await supabase.from('plans').insert(fallbackPayload).select().single()

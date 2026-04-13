@@ -9,7 +9,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   const { data: plan, error: planError } = await supabase
     .from('plans')
-    .select('*, host:users(*)')
+    .select('*, host:users!plans_host_id_fkey(*)')
     .eq('id', params.id)
     .single()
 
@@ -17,7 +17,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   const { data: participants } = await supabase
     .from('plan_participants')
-    .select('*, user:users(*)')
+    .select('*, user:users!plan_participants_user_id_fkey(*)')
     .eq('plan_id', params.id)
     .in('status', ['joined', 'pending'])
 
