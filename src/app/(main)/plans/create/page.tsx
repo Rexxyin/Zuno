@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BottomNav } from '@/components/BottomNav'
@@ -8,11 +8,13 @@ import { CATEGORY_META } from '@/lib/categories'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import type { PlanCategory } from '@/lib/types'
 import { DEFAULT_LAUNCH_CITY, INDIA_HIGH_POTENTIAL_CITIES } from '@/lib/cities'
+import { useCity } from '@/components/CityContext'
 
 const steps = ['Details', 'Meetup', 'Settings', 'Review']
 
 export default function CreatePlanPage() {
   const router = useRouter()
+  const { selectedCity, setSelectedCity } = useCity()
   const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -32,9 +34,16 @@ export default function CreatePlanPage() {
     estimated_cost: '',
   })
 
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, city: selectedCity || DEFAULT_LAUNCH_CITY }))
+  }, [selectedCity])
+
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    if (name === 'city' && typeof value === 'string') {
+      setSelectedCity(value)
+    }
   }
 
   const canProceedToNextStep = () => {

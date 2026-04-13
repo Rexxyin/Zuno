@@ -3,18 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
-import { Search, Clock3, MapPin } from 'lucide-react'
+import { Clock3 } from 'lucide-react'
 import type { Plan, PlanCategory } from '@/lib/types'
 import { CATEGORY_META } from '@/lib/categories'
 import { CategoryIcon } from '@/components/CategoryIcon'
-import { DEFAULT_LAUNCH_CITY, INDIA_HIGH_POTENTIAL_CITIES } from '@/lib/cities'
+import { useCity } from '@/components/CityContext'
+import { normalizeCityKey } from '@/lib/cities'
 
 export default function FeedPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<PlanCategory | null>(null)
-  const [selectedCity, setSelectedCity] = useState<string>(DEFAULT_LAUNCH_CITY)
-  const [query, setQuery] = useState('')
+  const { selectedCity } = useCity()
 
   const fetchPlans = async () => {
     try {
@@ -41,16 +41,12 @@ export default function FeedPage() {
       plans
         .filter((p) => (selectedCategory ? p.category === selectedCategory : true))
         .filter((p) => {
-          const city = (p.city || '').toLowerCase().trim()
-          const target = selectedCity.toLowerCase()
+          const city = normalizeCityKey(p.city)
+          const target = normalizeCityKey(selectedCity)
           return city === target
         })
-        .filter((p) => {
-          const hay = `${p.title} ${p.description || ''} ${p.location_name}`.toLowerCase()
-          return hay.includes(query.toLowerCase())
-        })
         .sort((a, b) => +new Date(a.datetime) - +new Date(b.datetime)),
-    [plans, selectedCategory, selectedCity, query]
+    [plans, selectedCategory, selectedCity]
   )
 
   const nextPlan = filteredPlans.find((p) => +new Date(p.datetime) > Date.now())
@@ -66,30 +62,10 @@ export default function FeedPage() {
 
   return (
     <div className="pb-24 pt-2">
-      <div className="sticky top-0 z-10 border-b app-card backdrop-blur-md">
+      <div className="border-b app-card">
         <div className="mx-auto max-w-md px-4 py-3">
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.22em] app-muted">Zuno</p>
-              <h1 className="text-lg font-bold">Discover</h1>
-            </div>
-          </div>
-
-          <div className="mb-2 flex items-center gap-2">
-            <div className="rounded-xl border app-card px-2 py-1.5 flex-1">
-              <label className="inline-flex w-full items-center gap-2 text-xs app-muted">
-                <MapPin className="h-3.5 w-3.5" />
-                <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} className="w-full bg-transparent text-sm font-medium outline-none">
-                  {INDIA_HIGH_POTENTIAL_CITIES.map((city) => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="rounded-xl border app-card px-2 py-1.5 flex-1 inline-flex items-center gap-2">
-              <Search className="h-3.5 w-3.5 app-muted" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className="w-full bg-transparent text-sm outline-none" />
-            </div>
+          <div className="mb-2">
+            <h1 className="text-lg font-bold">Discover</h1>
           </div>
 
           <div className="flex flex-wrap gap-1.5">

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { canonicalizeCity } from '@/lib/cities'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
   if (!auth.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
+  const city = canonicalizeCity(body.city)
+  if (!city) return NextResponse.json({ error: 'City is required' }, { status: 400 })
 
   const payload = {
     host_id: auth.user.id,
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
     description: body.description ?? null,
     category: body.category ?? 'other',
     location_name: body.location_name,
-    city: body.city || 'General',
+    city,
     datetime: body.datetime,
     max_people: Number(body.max_people || 8),
     whatsapp_link: body.whatsapp_link || '',
@@ -62,8 +65,8 @@ export async function POST(request: Request) {
 
   let { data, error } = await supabase.from('plans').insert(payload).select().single()
 
-  if (error && /(google_maps_link|city|show_payment_options|estimated_cost)/.test(error.message)) {
-    const { google_maps_link, city, show_payment_options, estimated_cost, ...fallbackPayload } = payload
+  if (error && /(google_maps_link|show_payment_options|estimated_cost)/.test(error.message)) {
+    const { google_maps_link, show_payment_options, estimated_cost, ...fallbackPayload } = payload
     const retry = await supabase.from('plans').insert(fallbackPayload).select().single()
     data = retry.data
     error = retry.error

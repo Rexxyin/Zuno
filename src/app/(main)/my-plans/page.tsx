@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react'
 import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
 import type { Plan } from '@/lib/types'
+import { useCity } from '@/components/CityContext'
+import { normalizeCityKey } from '@/lib/cities'
 
 export default function MyPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
+  const { selectedCity } = useCity()
 
   useEffect(() => {
     const fetchSaved = async () => {
@@ -27,6 +30,8 @@ export default function MyPlansPage() {
     fetchSaved()
   }, [])
 
+  const cityPlans = plans.filter((plan) => normalizeCityKey(plan.city) === normalizeCityKey(selectedCity))
+
   return (
     <div className="pb-24 pt-4">
       <div className="mx-auto mb-4 max-w-md px-4">
@@ -37,13 +42,13 @@ export default function MyPlansPage() {
       <div className="mx-auto max-w-md px-4">
         {loading ? (
           <div className="space-y-3">{[1, 2].map((i) => <div key={i} className="h-64 rounded-2xl border app-card" />)}</div>
-        ) : plans.length === 0 ? (
+        ) : cityPlans.length === 0 ? (
           <div className="rounded-2xl border app-card p-6 text-center">
-            <p className="font-semibold">No saved plans yet</p>
-            <p className="mt-1 text-sm app-muted">Tap heart on any plan to save it.</p>
+            <p className="font-semibold">No saved plans in {selectedCity}</p>
+            <p className="mt-1 text-sm app-muted">Switch city from the top bar or save plans in this city.</p>
           </div>
         ) : (
-          <div className="grid gap-3">{plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}</div>
+          <div className="grid gap-3">{cityPlans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}</div>
         )}
       </div>
 
