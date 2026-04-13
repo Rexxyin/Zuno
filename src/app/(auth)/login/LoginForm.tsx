@@ -71,7 +71,6 @@ export function LoginForm() {
         className="text-center mb-12"
       >
         <motion.div
-          animate={{ rotate: 360 }}
           transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
           className="text-6xl mb-4 inline-block"
         >
@@ -104,7 +103,7 @@ export function LoginForm() {
             </svg>
             Continue with Google
           </motion.button>
-
+{/* 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/30" />
@@ -114,10 +113,10 @@ export function LoginForm() {
                 Or continue with
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Email Option */}
-          <motion.button
+          {/* <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setMode('email')}
@@ -126,10 +125,10 @@ export function LoginForm() {
             <Mail className="w-5 h-5" />
             Continue with Email
             <ArrowRight className="w-4 h-4 ml-auto" />
-          </motion.button>
+          </motion.button> */}
 
           {/* Phone Option */}
-          <motion.button
+          {/* <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setMode('phone')}
@@ -138,7 +137,7 @@ export function LoginForm() {
             <Phone className="w-5 h-5" />
             Continue with Phone
             <ArrowRight className="w-4 h-4 ml-auto" />
-          </motion.button>
+          </motion.button> */}
         </motion.div>
       )}
 
