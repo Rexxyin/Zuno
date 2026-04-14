@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { dbSetupRequiredResponse, isMissingRelationError } from '@/lib/supabase/errors'
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
@@ -9,7 +10,8 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: plan } = await supabase.from('plans').select('host_id').eq('id', id).single()
+  const { data: plan, error: planError } = await supabase.from('plans').select('host_id').eq('id', id).single()
+  if (isMissingRelationError(planError, 'plans')) return dbSetupRequiredResponse()
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
   if (plan.host_id !== auth.user.id) return NextResponse.json({ error: 'Only host can access requests' }, { status: 403 })
 
