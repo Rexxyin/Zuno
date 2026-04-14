@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Plan } from '@/lib/types'
-import { Heart, CheckCircle2, Share2, Clock3, MapPin, Lock, ArrowRight } from 'lucide-react'
+import { Heart, CheckCircle2, Share2, Clock3, MapPin, Lock } from 'lucide-react'
 import { CATEGORY_META } from '@/lib/categories'
 import { CategoryIcon } from './CategoryIcon'
 import { useState } from 'react'
@@ -16,41 +16,38 @@ export function PlanCard({ plan, onToggleFavorite, isAuthed = true }: { plan: Pl
   const category = CATEGORY_META[plan.category]
   const userHasJoined = !!plan.is_joined
 
-  const handleShare = async (e: React.MouseEvent) => {
+  const handleShare = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     const shareUrl = `${window.location.origin}/plans/${plan.id}`
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: plan.title, text: plan.description || `Join ${plan.title} on Zuno`, url: shareUrl })
-        return
-      }
-
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // user cancelled native share; no-op
-    }
+    navigator.clipboard.writeText(shareUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
     <Link href={`/plans/${plan.id}`} className="block group">
-      <div className="overflow-hidden rounded-[28px] border-2 border-[#d8cbb8] app-card shadow-[0_4px_18px_rgba(26,20,16,0.05)] transition-all duration-200 hover:shadow-[0_8px_26px_rgba(26,20,16,0.09)]">
-        <div className="relative h-44 w-full overflow-hidden bg-[#e6ded2]">
+      <div className="rounded-2xl overflow-hidden border-[1.5px] app-card hover:shadow-sm transition-all duration-200">
+        <div className="relative h-40 w-full overflow-hidden bg-[#e6ded2]">
           <Image
             src={plan.image_url || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=800'}
             alt={plan.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 390px) 100vw, 390px"
             priority={false}
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
 
-          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#faf8f4] px-3 py-1.5 text-[11px] font-semibold text-[#1a1410] shadow-sm">
-            <CategoryIcon icon={category.icon} className="h-3.5 w-3.5" /> {category.label}
+          <div className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-[#faf8f4]/95 border border-[#1a1410]/10 px-2 py-1 text-[9px] font-semibold text-[#1a1410]">
+            <CategoryIcon icon={category.icon} className="h-2.5 w-2.5" /> {category.label}
           </div>
+
+          {plan.visibility === 'private' && (
+            <div className="absolute left-2.5 bottom-2.5 flex items-center gap-1 rounded-full bg-[#1a1410] text-[#faf8f4] px-2 py-1 text-[9px] font-semibold">
+              <Lock className="h-3 w-3" /> Private
+            </div>
+          )}
 
           <button
             type="button"
@@ -59,54 +56,39 @@ export function PlanCard({ plan, onToggleFavorite, isAuthed = true }: { plan: Pl
               e.stopPropagation()
               onToggleFavorite?.()
             }}
-            className="absolute right-3 top-3 rounded-full bg-[#faf8f4] p-2 text-[#8f8272] shadow-sm transition-colors hover:text-[#d4522a]"
+            className="absolute right-2.5 top-2.5 rounded-full bg-[#faf8f4]/95 p-1.5 text-[#8f8272] hover:text-[#d4522a] transition-colors"
             aria-label="toggle favorite"
           >
-            <Heart className={`h-4 w-4 ${plan.is_favorite ? 'fill-[#d4522a] text-[#d4522a]' : ''}`} />
+            <Heart className={`h-3.5 w-3.5 ${plan.is_favorite ? 'fill-[#d4522a] text-[#d4522a]' : ''}`} />
           </button>
 
-          {plan.visibility === 'private' && (
-            <div className="absolute left-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-[#1a1410] px-2.5 py-1 text-[10px] font-semibold text-[#faf8f4]">
-              <Lock className="h-3 w-3" /> Private
+          {userHasJoined && (
+            <div className="absolute right-2.5 bottom-2.5 flex items-center gap-0.5 rounded-full bg-[#1a1410] text-[#faf8f4] px-1.5 py-1 text-[9px] font-semibold">
+              <CheckCircle2 className="h-3 w-3" /> Joined
             </div>
           )}
         </div>
 
-        <div className="space-y-2.5 p-4">
-          <h3 className="text-[38px] leading-none font-semibold tracking-[-0.02em] text-[#1a1410] sm:text-[40px]">{plan.title}</h3>
-          <p className="line-clamp-1 text-base text-[#8f8272]">{plan.description || 'No description provided.'}</p>
-
-          <p className="text-[15px] font-semibold text-[#5a4e42]">
-            {planDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            <span className="mx-2 text-[#b8aa99]">•</span>
-            {planDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-            <span className="mx-2 text-[#b8aa99]">•</span>
-            <span className="text-[#d4522a]">{Math.max((plan.max_people || 1) - (((plan as any).joined_names?.length || 0) + 1), 0)} spots left</span>
-          </p>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-1 inline-flex items-center gap-1 text-sm text-[#5a4e42]"><MapPin className="h-3.5 w-3.5" />{plan.location_name}</p>
-              <p className="line-clamp-1 text-sm font-medium text-[#1a1410]">{plan.host?.name || 'Host'}</p>
-            </div>
-
-            {!userHasJoined && (
-              isAuthed ? (
-                <button className="inline-flex items-center gap-1 rounded-full bg-[#1a1410] px-5 py-2.5 text-lg font-semibold text-[#faf8f4]">Join <ArrowRight className="h-5 w-5" /></button>
-              ) : (
-                <a href="/login?next=/feed" className="inline-flex items-center gap-1 rounded-full bg-[#1a1410] px-5 py-2.5 text-lg font-semibold text-[#faf8f4]">Join <ArrowRight className="h-5 w-5" /></a>
-              )
-            )}
-            {userHasJoined && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"><CheckCircle2 className="h-4 w-4" /> Joined</span>}
+        <div className="p-2.5 space-y-1.5">
+          <h3 className="text-sm font-semibold line-clamp-1 text-[#1a1410]">{plan.title}</h3>
+          <div className="text-xs text-[#4f4337] space-y-1">
+            <p className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" /> {planDate.toLocaleString()}</p>
+            <p className="inline-flex items-center gap-1 line-clamp-1"><MapPin className="h-3 w-3" /> {plan.location_name}</p>
+            <p className="truncate">by <span className="font-medium">{plan.host?.name || 'Host'}</span></p>
           </div>
 
           {!!(plan as any).joined_names?.length && <AvatarStack names={(plan as any).joined_names} />}
 
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={handleShare} className={`rounded-xl p-2 transition-all ${copied ? 'bg-[#e8f3e8] text-[#2d7a2d]' : 'bg-[#efe8dc] text-[#5a4e42] hover:bg-[#e4ddd1]'}`}>
-              <Share2 className="h-4 w-4" />
+          <p className="text-[11px] font-semibold text-[#d4522a]">Hurry! Happening soon — join now.</p>
+
+          <div className="flex items-center gap-1.5 pt-1">
+            <button type="button" onClick={handleShare} className={`rounded-md p-1.5 transition-all flex-shrink-0 ${copied ? 'bg-[#e8f3e8] text-[#2d7a2d]' : 'bg-[#efe8dc] text-[#5a4e42] hover:bg-[#e4ddd1]'}`}>
+              <Share2 className="h-3.5 w-3.5" />
             </button>
-            <p className="inline-flex items-center gap-1 text-xs text-[#7b6f62]"><Clock3 className="h-3.5 w-3.5" />Quick share</p>
+            {!userHasJoined && (
+              isAuthed ? <button className="flex-1 rounded-md bg-[#1a1410] text-[#faf8f4] font-semibold py-1.5 text-xs">Join</button>
+              : <a href="/login?next=/feed" className="flex-1 rounded-md bg-[#1a1410] text-[#faf8f4] font-semibold py-1.5 text-xs text-center">Sign up to join</a>
+            )}
           </div>
         </div>
       </div>
