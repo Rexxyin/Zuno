@@ -76,7 +76,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         <div className="rounded-xl border border-gray-200 bg-white p-5 text-center">
           {/* Avatar */}
           <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 text-xl font-bold text-white">
-            {user.avatar_url ? <Image src={user.avatar_url} alt={user.name} width={80} height={80} className="h-full w-full object-cover" /> : (user.name?.charAt(0).toUpperCase() || 'U')}
+            {user?.avatar_url ? <img src={user.avatar_url} alt={user.name} width={80} height={80} className="h-full w-full object-cover" /> : (user.name?.charAt(0).toUpperCase() || 'U')}
           </div>
 
           {/* Name */}
