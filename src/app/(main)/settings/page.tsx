@@ -28,7 +28,6 @@ export default function SettingsPage() {
   }, [supabase])
 
   const save = async () => {
-    if (!instagramUrl) return alert('Instagram profile link is required.')
     if (!name.trim()) return alert('Name is required.')
 
     setLoading(true)
@@ -36,7 +35,7 @@ export default function SettingsPage() {
     if (auth.user) {
       await supabase
         .from('users')
-        .update({ name, avatar_url: avatarUrl || null, instagram_url: instagramUrl, gpay_link: gpayLink || null, instagram_handle: instagramUrl.split('/').filter(Boolean).pop() || null })
+        .update({ name, avatar_url: avatarUrl || null, instagram_url: instagramUrl || null, gpay_link: gpayLink || null, instagram_handle: instagramUrl ? instagramUrl.split('/').filter(Boolean).pop() || null : null })
         .eq('id', auth.user.id)
     }
     setLoading(false)
@@ -60,7 +59,7 @@ export default function SettingsPage() {
         <div className="space-y-3 rounded-2xl border app-card p-3 text-sm">
           <label className="block"><span className="mb-1 block font-medium">Name</span><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border app-card px-3 py-2" /></label>
           <label className="block"><span className="mb-1 block font-medium">Profile photo URL</span><input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="w-full rounded-xl border app-card px-3 py-2" /></label>
-          <label className="block"><span className="mb-1 block font-medium">Instagram profile URL (required)</span><input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className="w-full rounded-xl border app-card px-3 py-2" /></label>
+          <label className="block"><span className="mb-1 block font-medium">Instagram profile URL (optional)</span><input value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} className="w-full rounded-xl border app-card px-3 py-2" /></label>
           <label className="block"><span className="mb-1 block font-medium">UPI / GPay link</span><input value={gpayLink} onChange={(e) => setGpayLink(e.target.value)} className="w-full rounded-xl border app-card px-3 py-2" /></label>
           <button onClick={save} disabled={loading} className="w-full rounded-xl bg-black px-3 py-2 text-white inline-flex items-center justify-center gap-2"><Save className="h-4 w-4" /> Save</button>
           <button onClick={signOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-3 py-2 font-medium text-red-500"><LogOut className="h-4 w-4" /> Logout</button>

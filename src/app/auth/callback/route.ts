@@ -31,8 +31,8 @@ export async function GET(request: Request) {
       await supabase.from('users').upsert(fallback)
     }
 
-    const { data: profile } = await supabase.from('users').select('name,gender,age,phone_number,instagram_url').eq('id', user.id).single()
-    const needsOnboarding = !(profile?.name && profile?.gender && profile?.age && profile?.phone_number && profile?.instagram_url)
+    const { data: profile } = await supabase.from('users').select('name,gender,age').eq('id', user.id).single()
+    const needsOnboarding = !(profile?.name && profile?.gender && profile?.age)
     if (needsOnboarding) return NextResponse.redirect(`${origin}/onboarding`)
   }
 
