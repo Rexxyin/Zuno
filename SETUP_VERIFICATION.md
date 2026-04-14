@@ -402,21 +402,3 @@ SELECT COUNT(*) FROM plans;      # ✓ Returns count
 🎉 **Congratulations!** Your Zuno MVP is ready for deployment and production use!
 
 For support or issues, check the README.md or raise an issue on GitHub.
-
-### Common Errors: quick fixes
-
-#### `{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`
-- Go to **Supabase Dashboard → Authentication → Providers**.
-- Enable the provider you're using (Google for OAuth, Phone for OTP).
-- Save and retry login.
-
-#### `Database schema is not ready. Please run the latest Supabase migrations and refresh schema cache.`
-- From repo root run:
-  ```bash
-  ./scripts/setup-supabase.sh
-  ```
-- This applies every file in `supabase/migrations` (including the latest schema/cache sync migration).
-- If you still see stale schema, open SQL editor and run:
-  ```sql
-  notify pgrst, 'reload schema';
-  ```
