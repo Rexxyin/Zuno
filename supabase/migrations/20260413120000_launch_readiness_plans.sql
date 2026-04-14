@@ -20,11 +20,14 @@ create table if not exists public.expense_settlements (
 
 alter table public.expense_settlements enable row level security;
 
-create policy if not exists "Participant read settlements" on public.expense_settlements
+drop policy if exists "Participant read settlements" on public.expense_settlements;
+create policy "Participant read settlements" on public.expense_settlements
   for select using (true);
 
-create policy if not exists "Self manage settlement" on public.expense_settlements
+drop policy if exists "Self manage settlement" on public.expense_settlements;
+create policy "Self manage settlement" on public.expense_settlements
   for insert with check (auth.uid() = user_id);
 
-create policy if not exists "Self update settlement" on public.expense_settlements
+drop policy if exists "Self update settlement" on public.expense_settlements;
+create policy "Self update settlement" on public.expense_settlements
   for update using (auth.uid() = user_id);
