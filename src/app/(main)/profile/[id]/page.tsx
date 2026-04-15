@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { generateAvatarSeed, getUserAvatarUrl } from '@/lib/avatar'
 import { toast } from '@/components/ui/toast'
+import { generateUpiLink, normalizeUpiId } from '@/lib/upi'
 
 type EditableProfile = {
   name: string
@@ -257,8 +258,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-gray-700">UPI / GPay link (optional)</span>
-              <input value={edit.gpayLink} onChange={(e) => setEdit((prev) => ({ ...prev, gpayLink: e.target.value }))} className="w-full rounded-xl border app-card px-3 py-2" placeholder="upi://pay?..." />
+              <span className="mb-1 block font-medium text-gray-700">UPI ID (optional)</span>
+              <input value={edit.gpayLink} onChange={(e) => setEdit((prev) => ({ ...prev, gpayLink: e.target.value }))} className="w-full rounded-xl border app-card px-3 py-2" placeholder="name@upi" />
             </label>
 
             <button onClick={handleSave} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-black px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
@@ -278,11 +279,16 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 <Instagram className="h-4 w-4" /> Instagram
               </a>
             )}
-            {user.gpay_link && (
-              <a href={user.gpay_link} target="_blank" rel="noreferrer" className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:shadow-md active:scale-95">
-                💳 GPay
-              </a>
-            )}
+            {user.gpay_link && (() => {
+              const upiIntentLink = generateUpiLink({ upiId: normalizeUpiId(user.gpay_link) })
+              if (!upiIntentLink) return null
+
+              return (
+                <a href={upiIntentLink} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:shadow-md active:scale-95">
+                  💳 Pay via UPI
+                </a>
+              )
+            })()}
           </div>
         )}
       </div>

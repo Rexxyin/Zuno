@@ -21,7 +21,7 @@ export async function GET() {
     if (plan.visibility !== 'private') return true
     if (!auth.user) return false
     if (plan.host_id === auth.user.id) return true
-    return (plan.participants || []).some((pp: any) => pp.user_id === auth.user.id)
+    return (plan.participants || []).some((pp: any) => pp.user_id === auth.user.id && pp.status === 'joined')
   })
 
   if (!auth.user) {
