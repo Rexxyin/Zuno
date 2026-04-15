@@ -140,8 +140,8 @@ export default function CreatePlanPage() {
             </div>
             <input type="url" name="whatsapp_link" value={formData.whatsapp_link} onChange={handleChange} placeholder="WhatsApp group link (single place)" className="w-full rounded-xl border app-card px-3 py-2.5" />
             <input type="number" name="estimated_cost" value={formData.estimated_cost} onChange={handleChange} placeholder="Estimated budget per person (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
-            <input type="number" name="total_amount" value={formData.total_amount} onChange={handleChange} placeholder="Total amount (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
-            <input type="number" name="per_person_amount" value={formData.per_person_amount} onChange={handleChange} placeholder="Per person amount (optional)" className="w-full rounded-xl border app-card px-3 py-2.5" />
+            <input type="number" name="total_amount" value={formData.total_amount} onChange={handleChange} placeholder="Total group amount (auto split if per person is empty)" className="w-full rounded-xl border app-card px-3 py-2.5" />
+            <input type="number" name="per_person_amount" value={formData.per_person_amount} onChange={handleChange} placeholder="Per person amount (overrides total split)" className="w-full rounded-xl border app-card px-3 py-2.5" />
             <label className="flex items-center justify-between gap-2"><span>Show organizer payment options</span><input type="checkbox" role="switch" name="show_payment_options" checked={formData.show_payment_options} onChange={handleChange} /></label>
             <label className="flex items-center justify-between gap-2"><span>Require approval</span><input type="checkbox" role="switch" name="approval_mode" checked={formData.approval_mode} onChange={handleChange} disabled={formData.host_mode === 'open'} /></label>
             <label className="flex items-center justify-between gap-2"><span>Women only</span><input type="checkbox" role="switch" name="female_only" checked={formData.female_only} onChange={handleChange} /></label>

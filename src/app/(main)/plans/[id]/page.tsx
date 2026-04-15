@@ -3,13 +3,22 @@
 import { use, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/toast'
-import {  Users, Calendar, Heart, ChevronLeft, Info, Instagram } from 'lucide-react'
+import { Users, Calendar, Heart, ChevronLeft, Info, Instagram, Lock } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { BottomNav } from '@/components/BottomNav'
 import { LocationLink } from '@/components/LocationLink'
 import { TrustBadge } from '@/components/TrustBadge'
 import type { Plan } from '@/lib/types'
+import { generateUpiLink, isMobileDevice, normalizeUpiId } from '@/lib/upi'
+
+type JoinedParticipant = {
+  id: string
+  user_id: string
+  user?: {
+    name?: string | null
+  }
+}
 
 export default function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -47,9 +56,64 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
     load()
   }, [id])
 
-  const participantCount = useMemo(() => ((plan?.participants || []).filter((p: any) => p.status === 'joined').length || 0) + 1, [plan])
+  const joinedParticipants = useMemo(
+    () => ((plan?.participants || []).filter((p: any) => p.status === 'joined') as JoinedParticipant[]),
+    [plan?.participants],
+  )
+  const participantCount = useMemo(() => joinedParticipants.length + 1, [joinedParticipants.length])
   const isHost = (plan as any)?.current_user_id && (plan as any).current_user_id === plan?.host_id
   const isExpired = useMemo(() => plan && new Date(plan.datetime) < new Date(), [plan])
+
+  const normalizedUpiId = useMemo(() => normalizeUpiId(plan?.host?.gpay_link), [plan?.host?.gpay_link])
+  const splitAmount = useMemo(() => {
+    if (!plan) return null
+
+    if (typeof plan.per_person_amount === 'number' && Number.isFinite(plan.per_person_amount) && plan.per_person_amount > 0) {
+      return Number(plan.per_person_amount)
+    }
+
+    if (typeof plan.total_amount === 'number' && Number.isFinite(plan.total_amount) && plan.total_amount > 0 && participantCount > 0) {
+      return Number(plan.total_amount) / participantCount
+    }
+
+    return null
+  }, [participantCount, plan])
+
+  const paymentRows = useMemo(() => {
+    if (!plan || !splitAmount || !normalizedUpiId) return []
+    const note = `${plan.title} split`
+
+    return joinedParticipants
+      .filter((participant) => participant.user_id !== plan.host_id)
+      .map((participant) => ({
+        userId: participant.user_id,
+        name: participant.user?.name || 'Participant',
+        amount: splitAmount,
+        intent: generateUpiLink({
+          upiId: normalizedUpiId,
+          amount: splitAmount,
+          note,
+        }),
+      }))
+  }, [joinedParticipants, normalizedUpiId, plan, splitAmount])
+
+  const launchPayment = (intentLink: string) => {
+    if (!intentLink) {
+      toast.error('Payment link not available', {
+        description: 'Organizer has not set a valid UPI ID yet.',
+      })
+      return
+    }
+
+    if (!isMobileDevice()) {
+      toast.error('Open on mobile to pay', {
+        description: 'UPI apps open directly on a phone. You can still copy this link manually.',
+      })
+      return
+    }
+
+    window.location.href = intentLink
+  }
 
   const join = async () => {
     const resp = await fetch(`/api/plans/${id}/join`, { method: 'POST' })
@@ -107,10 +171,13 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
       <div className="mx-auto max-w-md space-y-4 px-4 py-4">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <h1 className="text-xl font-bold">{plan.title}</h1>
+            {plan.visibility === 'private' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#1a1410] px-2 py-1 text-[10px] font-semibold text-[#faf8f4]"><Lock className="h-3 w-3" /> Private</span>
+            )}
             {isExpired && (
-              <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded-full">Expired</span>
+              <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700">Expired</span>
             )}
           </div>
           <p className="text-sm app-muted">{plan.location_name}</p>
@@ -123,7 +190,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
           </div>
           <p className="font-medium">{plan.host?.name || 'Host'}</p>
           {plan.host?.instagram_url && (
-            <a href={plan.host.instagram_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-pink-500 text-xs">
+            <a href={plan.host.instagram_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-pink-500">
               <Instagram className="h-3 w-3" /> Instagram profile
             </a>
           )}
@@ -136,10 +203,33 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
           <div className="rounded-xl border app-card p-3"><p className="inline-flex items-center gap-1"><Info className="h-4 w-4" /> Host included in count</p></div>
         </div>
 
-        {plan.show_payment_options && plan.host?.gpay_link && (
-          <a href={plan.host.gpay_link} target="_blank" rel="noreferrer" className="block rounded-xl border app-card p-3 text-sm font-medium">
-            Pay organizer (GPay)
-          </a>
+        {plan.show_payment_options && splitAmount && paymentRows.length > 0 && (
+          <section className="space-y-2 rounded-2xl border app-card p-3 text-sm">
+            <div>
+              <p className="font-semibold text-[#1a1410]">Split payments</p>
+              <p className="text-xs app-muted">
+                {plan.per_person_amount ? 'Per person split set by organizer.' : 'Auto split from total amount.'} Each share: ₹{splitAmount.toFixed(2)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {paymentRows.map((row) => (
+                <div key={row.userId} className="flex items-center justify-between rounded-lg border app-card px-2.5 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-[#1a1410]">{row.name}</p>
+                    <p className="text-xs app-muted">₹{row.amount.toFixed(2)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => launchPayment(row.intent)}
+                    className="rounded-lg bg-[#1a1410] px-3 py-1.5 text-xs font-semibold text-[#faf8f4]"
+                  >
+                    Pay now
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {plan.whatsapp_link && isJoined && !isExpired && (
@@ -147,8 +237,6 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
             Open WhatsApp group
           </a>
         )}
-
-
 
         {(plan.participants || []).length > 0 && (
           <div className="rounded-2xl border app-card p-3 text-sm">
@@ -166,7 +254,7 @@ export default function PlanPage({ params }: { params: Promise<{ id: string }> }
 
         <div className="grid grid-cols-2 gap-2">
           {isExpired ? (
-            <button disabled className="rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 cursor-not-allowed opacity-50">This plan has ended</button>
+            <button disabled className="cursor-not-allowed rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 opacity-50">This plan has ended</button>
           ) : isHost ? (
             <button disabled className="rounded-xl border app-card px-4 py-2.5 text-sm font-semibold app-muted">You are the organizer</button>
           ) : !isJoined ? (

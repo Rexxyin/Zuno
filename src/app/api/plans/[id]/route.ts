@@ -20,7 +20,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     .from('plan_participants')
     .select('*, user:users!plan_participants_user_id_fkey(*)')
     .eq('plan_id', id)
-    .in('status', ['joined', 'pending'])
+    .eq('status', 'joined')
 
   const isParticipant = (participants || []).some((p: any) => p.user_id === auth.user?.id)
   if (plan.visibility === 'private' && !(auth.user && (plan.host_id === auth.user.id || isParticipant))) {
