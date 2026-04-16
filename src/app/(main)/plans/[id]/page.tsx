@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import PlanDetailClient from "./PlanDetailClient";
 import { createClient } from "@/lib/supabase/server"; // ✅ IMPORTANT
 
@@ -9,8 +10,10 @@ import { createClient } from "@/lib/supabase/server"; // ✅ IMPORTANT
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { id } = await params;
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  );
 
   const { data: plan, error } = await supabase
     .from("plans")
@@ -25,12 +28,14 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
   }
 
   /* ✅ Build absolute OG URL */
-const headerList = await headers();
-const host = headerList.get("host");
+  const headerList = await headers();
+  const host = headerList.get("x-forwarded-host") || headerList.get("host");
+  const forwardedProto = headerList.get("x-forwarded-proto");
   const protocol = host?.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = `${forwardedProto || protocol}://${host}`;
 
   const ogImageUrl = `${baseUrl}/plans/${id}/opengraph-image`;
+  const canonicalUrl = `${baseUrl}/plans/${id}`;
 
   return {
     title: `${plan.title} | Join now`,
@@ -40,6 +45,8 @@ const host = headerList.get("host");
     openGraph: {
       title: plan.title,
       description: plan.description || "Join this plan",
+      url: canonicalUrl,
+      siteName: "Zuno",
       images: [
         {
           url: ogImageUrl,

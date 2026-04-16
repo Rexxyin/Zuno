@@ -1,7 +1,5 @@
-import { headers } from "next/headers";
 import { ImageResponse } from "next/og";
-import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server"; // ← server, not client
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export const alt = "Plan preview";
 export const size = {
@@ -9,12 +7,14 @@ export const size = {
   height: 630,
 };
 
-export const runtime = "edge"; // ← add this
+export const runtime = "edge";
 
 export default async function OG({ params }: any) {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  );
 
   const { data: plan } = await supabase
     .from("plans")
