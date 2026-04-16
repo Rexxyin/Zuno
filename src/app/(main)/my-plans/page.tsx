@@ -130,23 +130,23 @@ export default function MyPlansPage() {
         ) : (
           <div className="grid gap-3">
             {activePlans.map((plan) => (
-              <div key={plan.id} className="space-y-2">
+              <div key={plan.id} className="space-y-1.5">
                 <PlanCard plan={plan} />
                 {view === 'hosted' && (
-                  <div className="rounded-xl border app-card p-2">
+                  <div className="rounded-xl border app-card p-2.5">
                     <div className="grid grid-cols-2 gap-2">
-                      <a href={`/plans/${plan.id}/edit`} className="rounded-lg border app-card px-3 py-2 text-center text-sm font-semibold">Edit plan</a>
-                      <button onClick={() => loadRequests(plan.id)} className="rounded-lg bg-[#1a1410] px-3 py-2 text-sm font-semibold text-[#faf8f4]">Manage requests</button>
+                      <a href={`/plans/${plan.id}/edit`} className="rounded-lg border app-card px-2.5 py-2 text-center text-xs font-semibold">Edit</a>
+                      <button onClick={() => loadRequests(plan.id)} className="rounded-lg bg-[#1a1410] px-2.5 py-2 text-xs font-semibold text-[#faf8f4]">Manage</button>
                     </div>
 
                     {!!requestsByPlan[plan.id]?.length && (
-                      <div className="mt-2 space-y-2 text-sm">
+                      <div className="mt-2 space-y-1.5 text-sm">
                         {requestsByPlan[plan.id].map((req) => (
                           <div key={req.user_id} className="flex items-center justify-between rounded-lg border app-card px-2 py-1.5">
-                            <span>{req.user?.name || 'User'}</span>
+                            <span className="text-xs font-medium text-[#2b221c]">{req.user?.name || 'User'}</span>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => handleRequest(plan.id, req.user_id, 'approve')} className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Approve</button>
-                              <button onClick={() => handleRequest(plan.id, req.user_id, 'decline')} className="rounded bg-red-600 px-2 py-1 text-xs font-semibold text-white">Decline</button>
+                              <button onClick={() => handleRequest(plan.id, req.user_id, 'approve')} className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white">Approve</button>
+                              <button onClick={() => handleRequest(plan.id, req.user_id, 'decline')} className="rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white">Decline</button>
                             </div>
                           </div>
                         ))}
