@@ -23,10 +23,12 @@ export const isValidUpiId = (value?: string | null) => UPI_ID_REGEX.test(normali
 
 export const generateUpiLink = ({
   upiId,
+  payeeName,
   amount,
   note,
 }: {
   upiId: string
+  payeeName?: string
   amount?: number | null
   note?: string
 }) => {
@@ -41,6 +43,8 @@ export const generateUpiLink = ({
   if (typeof amount === 'number' && Number.isFinite(amount) && amount > 0) {
     params.set('am', amount.toFixed(2))
   }
+
+  if (payeeName?.trim()) params.set('pn', payeeName.trim())
 
   if (note?.trim()) params.set('tn', note.trim())
 

@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PlanCard } from '@/components/PlanCard'
 import { BottomNav } from '@/components/BottomNav'
-import { Lock, MapPin, Search, X } from 'lucide-react'
+import { Lock, MapPin, Search } from 'lucide-react'
 import type { Plan, PlanCategory } from '@/lib/types'
 import { CATEGORY_META } from '@/lib/categories'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { useCity } from '@/components/CityContext'
 import { normalizeCityKey } from '@/lib/cities'
 import { createClient } from '@/lib/supabase/client'
+import { useSearchParams } from 'next/navigation'
+import { SignInDialog } from '@/components/auth/SignInDialog'
 
 export default function FeedPage() {
   const [plans, setPlans] = useState<Plan[]>([])
@@ -19,6 +21,7 @@ export default function FeedPage() {
   const [isAuthed, setIsAuthed] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const { selectedCity } = useCity()
+  const searchParams = useSearchParams()
 
   const fetchPlans = async () => {
     try {
@@ -38,6 +41,12 @@ export default function FeedPage() {
     fetchPlans()
     createClient().auth.getUser().then(({ data }) => setIsAuthed(!!data.user))
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('signin') === '1') {
+      setShowAuthDialog(true)
+    }
+  }, [searchParams])
 
   const categories = Object.keys(CATEGORY_META) as PlanCategory[]
 
@@ -156,21 +165,7 @@ export default function FeedPage() {
         )}
       </div>
 
-      {showAuthDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="w-full max-w-sm rounded-2xl border app-card p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="font-semibold text-[#1a1410]">Sign in to continue</p>
-              <button onClick={() => setShowAuthDialog(false)} className="rounded-md p-1 text-[#8f8272]"><X className="h-4 w-4" /></button>
-            </div>
-            <p className="text-sm text-[#5a4e42]">Join plans, request approvals, and manage your own hosted plans.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <a href="/login?next=/feed" className="rounded-lg border app-card px-3 py-2 text-center text-sm font-semibold text-[#1a1410]">Sign in</a>
-              <a href="/login?next=/feed" className="rounded-lg bg-[#1a1410] px-3 py-2 text-center text-sm font-semibold text-[#faf8f4]">Sign up</a>
-            </div>
-          </div>
-        </div>
-      )}
+      <SignInDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} nextPath="/feed" />
 
       {isAuthed && <BottomNav />}
     </div>

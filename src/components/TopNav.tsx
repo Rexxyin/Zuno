@@ -8,6 +8,7 @@ import { INDIA_HIGH_POTENTIAL_CITIES } from '@/lib/cities'
 import { useCity } from '@/components/CityContext'
 import { createClient } from '@/lib/supabase/client'
 import { getUserAvatarUrl } from '@/lib/avatar'
+import { SignInDialog } from '@/components/auth/SignInDialog'
 
 const HIDE_TOP_NAV_ROUTES = ['/settings']
 
@@ -21,6 +22,7 @@ export function TopNav() {
   const pathname = usePathname()
   const { selectedCity, setSelectedCity } = useCity()
   const [user, setUser] = useState<CurrentUser | null>(null)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -83,17 +85,19 @@ export function TopNav() {
                 />
               </Link>
             ) : (
-              <Link
-                href={`/login?next=${encodeURIComponent(pathname || '/feed')}`}
+              <button
+                type="button"
+                onClick={() => setShowAuthDialog(true)}
                 className="inline-flex h-10 items-center justify-center rounded-full border-[1.5px] app-card px-4 text-sm font-semibold text-[#1a1410]"
                 aria-label="Sign in"
               >
                 Login
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </div>
+      <SignInDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} nextPath={pathname || '/feed'} />
     </div>
   )
 }
