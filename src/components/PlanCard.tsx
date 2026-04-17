@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Plan } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/categories";
+import { parseDatetimeLocal, formatDate, formatTime } from "@/lib/datetime";
 
 /* ---------- ICON MAP ---------- */
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -49,7 +50,7 @@ export function PlanCard({
 
   if (!plan) return null;
 
-  const planDate = plan.datetime ? new Date(plan.datetime) : new Date();
+  const planDate = plan.datetime ? parseDatetimeLocal(plan.datetime) : new Date();
   const userHasJoined = !!plan.is_joined;
   const isHost = plan.current_user_id && plan.host_id === plan.current_user_id;
 
@@ -160,19 +161,13 @@ export function PlanCard({
           {/* META */}
           <div className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-[#6e6258]">
             <Meta icon={Calendar}>
-              {planDate.toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })}
+              {formatDate(planDate)}
             </Meta>
 
             <Dot />
 
             <Meta icon={Clock3}>
-              {planDate.toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+              {formatTime(planDate)}
             </Meta>
 
             <Dot />

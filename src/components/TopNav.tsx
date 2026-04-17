@@ -55,8 +55,8 @@ export function TopNav() {
   if (HIDE_TOP_NAV_ROUTES.includes(pathname)) return null
 
   return (
-    <div className="sticky top-0 z-20 border-b app-card backdrop-blur-md">
-      <div className="mx-auto max-w-md px-4 py-3">
+    <div className="sticky top-0 z-20 border-b app-card backdrop-blur-md overflow-visible">
+      <div className="mx-auto max-w-md px-4 py-3 overflow-visible">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] app-muted">Zuno</p>
@@ -88,7 +88,7 @@ export function TopNav() {
                   />
                 </button>
                 {showMenu && (
-                  <div className="absolute right-0 top-12 z-30 min-w-[150px] rounded-xl border app-card p-1.5 shadow-lg">
+                  <div className="absolute right-0 top-12 z-[9999] min-w-[150px] rounded-xl border app-card p-1.5 shadow-lg">
                     <Link href={`/profile/${user.id}`} onClick={() => setShowMenu(false)} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm hover:bg-[#f3ebdf]">
                       Profile
                     </Link>

@@ -20,6 +20,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { generateUpiLink, normalizeUpiId } from "@/lib/upi";
 import { BottomNav } from "@/components/BottomNav";
+import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
 
 type Settlement = {
   user_id: string;
@@ -35,7 +36,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
   const [settlements, setSettlements] = useState<Settlement[]>(plan.settlements || []);
   const [busy, setBusy] = useState<"join" | "leave" | "pay" | "settle" | null>(null);
 
-  const planDate = useMemo(() => new Date(plan.datetime), [plan.datetime]);
+  const planDate = useMemo(() => parseDatetimeLocal(plan.datetime), [plan.datetime]);
 
   const joinedParticipants = useMemo(
     () => (plan.participants || []).filter((p: any) => p.status === "joined"),
@@ -172,7 +173,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           </div>
           <div className="ml-auto flex items-center gap-2">
             {plan.host?.instagram_url && (
-              <a href={plan.host.instagram_url} target="_blank" rel="noreferrer" className="rounded-full border border-[#e7dfd3] p-1.5 text-[#a0522d]">
+              <a href={`https://instagram.com/${plan.host.instagram_url.replace(/^.*?(\/|@)?/, '').replace(/\/$/, '')}` || plan.host.instagram_url} target="_blank" rel="noreferrer" className="rounded-full border border-[#e7dfd3] p-1.5 text-[#a0522d] hover:bg-pink-50 transition">
                 <Instagram className="h-3.5 w-3.5" />
               </a>
             )}
@@ -185,13 +186,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
               <CalendarDays className="h-3.5 w-3.5" /> Date & time
             </p>
             <p className="text-sm font-medium text-[#1a1410]">
-              {new Intl.DateTimeFormat(undefined, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              }).format(planDate)}
+              {formatDateTime(planDate)}
             </p>
           </div>
 
@@ -199,20 +194,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
             <p className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-[#8b7b6d]">
               <Users className="h-3.5 w-3.5" /> Group size
             </p>
-            <p className="text-sm font-medium text-[#1a1410]">{joinedCount + 1}/{plan.max_people} people</p>
+            <p className="text-sm font-medium text-[#1a1410]">{joinedCount + 1}/{plan.max_people + 1} people</p>
           </div>
-        </div>
-
-        <div className="rounded-xl border app-card p-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#8b7b6d]">Meetup link</p>
-          <a
-            href={plan.google_maps_link || `https://maps.google.com/?q=${encodeURIComponent(plan.location_name || "")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1f6feb] underline-offset-4 hover:underline"
-          >
-            <MapPin className="h-4 w-4" /> {plan.location_name} <ExternalLink className="h-3.5 w-3.5" />
-          </a>
         </div>
 
         {isHost && (
@@ -228,31 +211,33 @@ export default function PlanDetailClient({ initialPlan }: any) {
 
         {(plan.estimated_cost || plan.total_amount || plan.per_person_amount) && (
           <div className="rounded-xl border app-card p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8b7b6d]">Splitwise</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8b7b6d]">💰 Split & Payment</p>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center">
               <Stat label="Estimate" value={plan.estimated_cost ? `₹${Number(plan.estimated_cost).toFixed(0)}` : "—"} />
               <Stat label="Total" value={plan.total_amount ? `₹${Number(plan.total_amount).toFixed(0)}` : "—"} />
-              <Stat label="Per person" value={effectivePerPerson ? `₹${Number(effectivePerPerson).toFixed(0)}` : "Auto"} />
+              <Stat label="Per person" value={effectivePerPerson ? `₹${Number(effectivePerPerson).toFixed(0)}` : "—"} />
             </div>
 
             {canShowPayments && !planIsLocked && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <a
-                  href={hostUpiLink!}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0f766e] px-3 py-2 text-xs font-semibold text-white transition active:scale-[0.98]"
-                  onClick={() => setBusy("pay")}
-                >
-                  <Wallet className="h-3.5 w-3.5" /> {busy === "pay" ? "Opening…" : "Pay with UPI"}
-                </a>
-                {!isHost && (
+              <div className="mt-3 space-y-2">
+                {isJoined && (
+                  <a
+                    href={hostUpiLink!}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#0f766e] px-3 py-2 text-xs font-semibold text-white transition active:scale-[0.98]"
+                    onClick={() => setBusy("pay")}
+                  >
+                    <Wallet className="h-3.5 w-3.5" /> {busy === "pay" ? "Opening…" : "Pay with UPI"}
+                  </a>
+                )}
+                {(isJoined || isHost) && (
                   <button
                     onClick={() => updateSettlement(!isSettled)}
                     disabled={busy === "settle"}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition active:scale-[0.98] ${
+                    className={`inline-flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition active:scale-[0.98] ${
                       isSettled ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-[#d8cdc0] text-[#5a4f43]"
                     }`}
                   >
-                    <Check className="h-3.5 w-3.5" /> {isSettled ? "Settled" : "Mark as settled"}
+                    <Check className="h-3.5 w-3.5" /> {isSettled ? "Settled ✓" : "Mark as settled"}
                   </button>
                 )}
               </div>
@@ -288,7 +273,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                     <span className="text-sm font-medium text-[#2b221c]">{personName}</span>
                   </Link>
                   <div className="flex items-center gap-2">
-                    {plan.host_id === plan.current_user_id && canShowPayments && (
+                    {(plan.host_id === plan.current_user_id || isJoined) && canShowPayments && (
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${personSettled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                         {personSettled ? "Settled" : "Pending"}
                       </span>

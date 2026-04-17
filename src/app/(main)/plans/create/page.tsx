@@ -26,7 +26,7 @@ export default function CreatePlanPage() {
     location_name: '',
     google_maps_link: '',
     datetime: '',
-    max_people: '8',
+    max_people: '1',
     whatsapp_link: '',
     approval_mode: false,
     female_only: false,

@@ -70,6 +70,13 @@ export default function FeedPage() {
           p.title.toLowerCase().includes(searchQuery.toLowerCase())
         )
         .filter((p) => {
+          // Hide private invite-only plans unless user is host or has joined
+          if (p.visibility === 'private' && p.host_id !== currentUserId && !p.is_joined) {
+            return false
+          }
+          return true
+        })
+        .filter((p) => {
           const expired = +new Date(p.datetime) < Date.now();
           const closed = p.status === "completed" || p.status === "cancelled";
           if (p.host_id === currentUserId) return true;
@@ -131,8 +138,8 @@ export default function FeedPage() {
       </Suspense>
 
       {/* HEADER */}
-      <div className="sticky top-0 z-40 border-b app-card app-surface pb-3 pt-4">
-        <div className="mx-auto max-w-md px-4">
+      <div className="sticky top-0 z-40 border-b app-card app-surface pb-3 pt-4 overflow-visible">
+        <div className="mx-auto max-w-md px-4 overflow-visible">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-extrabold text-[#1a1410]">
               Discover
