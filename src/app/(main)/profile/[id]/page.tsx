@@ -1,7 +1,7 @@
 'use client'
 
-import { use, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { Camera, ChevronLeft, Instagram, LogOut, Save, Sparkles } from 'lucide-react'
 import { TrustBadge } from '@/components/TrustBadge'
 import { BottomNav } from '@/components/BottomNav'
@@ -21,8 +21,9 @@ type EditableProfile = {
   avatarSeed: string
 }
 
-export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function ProfilePage() {
+  const params = useParams<{ id: string }>()
+  const id = params?.id || ''
   const router = useRouter()
   const supabase = createClient()
   const [user, setUser] = useState<User | null>(null)
@@ -38,7 +39,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     email: '',
     avatarSeed: '',
   })
-  const isOwnProfile = id === 'me'
+  const isOwnProfile = id === 'me' || !id
 
   const applyProfileToForm = (profile: User) => {
     setEdit({

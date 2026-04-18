@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { X, Sparkles } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 
 type SignInDialogProps = { open: boolean; onOpenChange: (open: boolean) => void; nextPath?: string }
@@ -15,7 +16,7 @@ export function SignInDialog({ open, onOpenChange, nextPath = '/feed' }: SignInD
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" onClick={() => onOpenChange(false)}>
       <div className="w-[90vw] max-w-[400px] overflow-hidden rounded-2xl border border-[rgba(26,20,16,0.15)] bg-[#faf8f4] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="bg-gradient-to-r from-[#1a1410] via-[#3d2f25] to-[#6d4f3a] px-4 py-4 text-[#faf8f4]">
@@ -30,6 +31,7 @@ export function SignInDialog({ open, onOpenChange, nextPath = '/feed' }: SignInD
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
