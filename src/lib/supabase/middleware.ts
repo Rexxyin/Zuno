@@ -27,7 +27,12 @@ export const updateSession = async (request: NextRequest) => {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)) || pathname.startsWith('/_next') || pathname.startsWith('/api')
+const isPublic =
+  publicPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
+  pathname.startsWith('/_next') ||
+  pathname.startsWith('/api') ||
+  pathname.startsWith('/public') ||   // (not strictly needed but ok)
+  pathname.match(/\.(png|jpg|jpeg|svg|webp|ico)$/) !== null
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
