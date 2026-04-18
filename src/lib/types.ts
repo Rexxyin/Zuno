@@ -18,7 +18,7 @@ export interface User {
 }
 
 export type PlanCategory = 'hiking' | 'food' | 'music' | 'cycling' | 'art' | 'travel' | 'sports' | 'other'
-export type PlanStatus = 'open' | 'closed' | 'full' | 'expired' | 'active' | 'completed' | 'cancelled' | 'deleted'
+export type PlanStatus = 'active' | 'full' | 'completed' | 'cancelled'
 export type PlanVisibility = 'public' | 'invite_only' | 'private'
 export type HostMode = 'host_managed' | 'open'
 export type ParticipantStatus = 'pending' | 'joined' | 'left' | 'attended' | 'declined'

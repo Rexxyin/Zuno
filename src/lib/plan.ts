@@ -7,8 +7,9 @@ export function normalizeVisibility(raw?: string | null): 'public' | 'invite_onl
 }
 
 export function normalizePlanStatus(raw?: string | null): NormalizedPlanStatus {
-  if (raw === 'closed' || raw === 'full' || raw === 'expired' || raw === 'open') return raw
-  if (raw === 'cancelled' || raw === 'completed' || raw === 'deleted') return 'closed'
+  if (raw === 'full') return 'full'
+  if (raw === 'cancelled' || raw === 'completed') return 'closed'
+  if (raw === 'open' || raw === 'closed' || raw === 'expired') return raw
   return 'open'
 }
 

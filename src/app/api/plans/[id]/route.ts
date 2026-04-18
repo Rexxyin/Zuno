@@ -36,10 +36,6 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     return NextResponse.json({ error: 'This plan has ended' }, { status: 410 })
   }
 
-  if (effectiveStatus !== plan.status) {
-    await supabase.from('plans').update({ status: effectiveStatus }).eq('id', id)
-  }
-
   return NextResponse.json({
     ...plan,
     visibility,
@@ -62,6 +58,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (existing.host_id !== auth.user.id) return NextResponse.json({ error: 'Only host can edit this plan' }, { status: 403 })
 
   const body = await request.json()
+  const mapPlanStatus = (status: unknown): 'active' | 'full' | 'completed' | 'cancelled' | undefined => {
+    if (typeof status !== 'string') return undefined
+    if (status === 'open' || status === 'active') return 'active'
+    if (status === 'full') return 'full'
+    if (status === 'closed' || status === 'cancelled' || status === 'deleted') return 'cancelled'
+    if (status === 'completed' || status === 'expired') return 'completed'
+    return undefined
+  }
+
   const visibility = body.visibility === 'invite_only' || body.visibility === 'private' ? 'invite_only' : body.visibility === 'public' ? 'public' : undefined
   const allowed: Record<string, any> = {
     title: body.title,
@@ -81,7 +86,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     cost_mode: body.cost_mode,
     cost_amount: body.cost_amount !== undefined ? Number(body.cost_amount) : undefined,
     final_amount: body.final_amount !== undefined ? Number(body.final_amount) : undefined,
-    status: body.status,
+    status: mapPlanStatus(body.status),
   }
 
   Object.keys(allowed).forEach((k) => allowed[k] === undefined && delete allowed[k])

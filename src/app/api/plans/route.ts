@@ -19,17 +19,9 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const nowIso = new Date().toISOString()
-  const expiredIds = (data || []).filter((p: any) => p.datetime && p.datetime < nowIso && p.status !== 'expired').map((p: any) => p.id)
-  if (expiredIds.length) {
-    await supabase.from('plans').update({ status: 'expired' }).in('id', expiredIds)
-  }
-
   const normalized = (data || [])
     .map((p: any) => {
       const effectiveStatus = computeEffectivePlanStatus(p)
-      if (effectiveStatus === 'expired') p.status = 'expired'
-      if (effectiveStatus === 'full') p.status = 'full'
       return {
         ...p,
         visibility: normalizeVisibility(p.visibility),
@@ -82,7 +74,7 @@ export async function POST(request: Request) {
     cost_mode: body.cost_mode || null,
     cost_amount: body.cost_amount ? Number(body.cost_amount) : null,
     final_amount: null,
-    status: 'open',
+    status: 'active',
   }
 
   let { data, error } = await supabase.from('plans').insert(payload).select().single()
