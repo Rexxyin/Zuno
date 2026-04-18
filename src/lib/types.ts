@@ -6,6 +6,7 @@ export interface User {
   instagram_handle: string | null
   instagram_url?: string | null
   gpay_link?: string | null
+  upi_payee_name?: string | null
   phone_verified: boolean
   gender?: string | null
   age?: number | null
@@ -17,8 +18,8 @@ export interface User {
 }
 
 export type PlanCategory = 'hiking' | 'food' | 'music' | 'cycling' | 'art' | 'travel' | 'sports' | 'other'
-export type PlanStatus = 'active' | 'full' | 'completed' | 'cancelled'
-export type PlanVisibility = 'public' | 'private'
+export type PlanStatus = 'open' | 'closed' | 'full' | 'expired' | 'active' | 'completed' | 'cancelled' | 'deleted'
+export type PlanVisibility = 'public' | 'invite_only' | 'private'
 export type HostMode = 'host_managed' | 'open'
 export type ParticipantStatus = 'pending' | 'joined' | 'left' | 'attended' | 'declined'
 
@@ -37,6 +38,7 @@ export interface Plan {
   category: PlanCategory
   status: PlanStatus
   approval_mode: boolean
+  require_approval?: boolean
   visibility?: PlanVisibility
   host_mode?: HostMode
   female_only: boolean
@@ -44,6 +46,9 @@ export interface Plan {
   estimated_cost?: number | null
   total_amount?: number | null
   per_person_amount?: number | null
+  cost_mode?: 'per_person' | 'total' | null
+  cost_amount?: number | null
+  final_amount?: number | null
   participant_count?: number
   is_joined?: boolean
   is_favorite?: boolean

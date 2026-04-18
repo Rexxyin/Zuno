@@ -13,9 +13,11 @@ import { generateUpiLink, normalizeUpiId } from '@/lib/upi'
 
 type EditableProfile = {
   name: string
+  email: string
   avatarUrl: string
   instagramUrl: string
   gpayLink: string
+  upiPayeeName: string
   avatarSeed: string
 }
 
@@ -32,6 +34,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     avatarUrl: '',
     instagramUrl: '',
     gpayLink: '',
+    upiPayeeName: '',
+    email: '',
     avatarSeed: '',
   })
   const isOwnProfile = id === 'me'
@@ -42,6 +46,8 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       avatarUrl: profile.avatar_url || '',
       instagramUrl: profile.instagram_url || '',
       gpayLink: profile.gpay_link || '',
+      upiPayeeName: profile.upi_payee_name || '',
+      email: (profile as any).email || '',
       avatarSeed: profile.avatar_seed || '',
     })
   }
@@ -60,6 +66,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
     const targetId = isOwnProfile ? authUser.id : id
     const { data } = await supabase.from('users').select('*').eq('id', targetId).single()
+    if (data && isOwnProfile) (data as any).email = authUser.email || ''
 
     if (!data) {
       setUser(null)
@@ -133,6 +140,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       avatar_seed: edit.avatarSeed.trim() || generateAvatarSeed(),
       instagram_url: edit.instagramUrl.trim() || null,
       gpay_link: edit.gpayLink.trim() || null,
+      upi_payee_name: edit.upiPayeeName.trim() || null,
       instagram_handle: edit.instagramUrl.trim()
         ? edit.instagramUrl.split('/').filter(Boolean).pop() || null
         : null,
@@ -251,8 +259,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             </label>
 
             <label className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">Email</span>
+              <input value={edit.email} readOnly className="w-full rounded-xl border app-card px-3 py-2 text-gray-500" />
+            </label>
+
+            <label className="block text-sm">
               <span className="mb-1 block font-medium text-gray-700">UPI ID (optional)</span>
               <input value={edit.gpayLink} onChange={(e) => setEdit((prev) => ({ ...prev, gpayLink: e.target.value }))} className="w-full rounded-xl border app-card px-3 py-2" placeholder="name@upi" />
+            </label>
+
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">Payee name</span>
+              <input value={edit.upiPayeeName} onChange={(e) => setEdit((prev) => ({ ...prev, upiPayeeName: e.target.value }))} className="w-full rounded-xl border app-card px-3 py-2" placeholder="Name as shown in your UPI app" />
+              <p className='mt-1 text-xs text-gray-500'>This name appears when someone pays you via UPI — make sure it matches exactly.</p>
             </label>
 
             <button onClick={handleSave} disabled={saving} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-black px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-50">

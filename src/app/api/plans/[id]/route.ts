@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { computeEffectivePlanStatus, normalizeVisibility } from '@/lib/plan'
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
@@ -23,11 +24,30 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     .eq('status', 'joined')
 
   const isParticipant = (participants || []).some((p: any) => p.user_id === auth.user?.id)
-  if (plan.visibility === 'private' && !(auth.user && (plan.host_id === auth.user.id || isParticipant))) {
-    return NextResponse.json({ error: 'This private plan is only visible to approved members via invite link.' }, { status: 403 })
+  const isHost = auth.user?.id === plan.host_id
+  const visibility = normalizeVisibility(plan.visibility)
+
+  if (visibility === 'invite_only' && !(isHost || isParticipant)) {
+    return NextResponse.json({ error: 'This invite-only plan is only visible with direct access.' }, { status: 403 })
   }
 
-  return NextResponse.json({ ...plan, participants: participants || [], current_user_id: auth.user?.id || null })
+  const effectiveStatus = computeEffectivePlanStatus({ ...plan, participants })
+  if (effectiveStatus === 'expired' && !isHost && !isParticipant) {
+    return NextResponse.json({ error: 'This plan has ended' }, { status: 410 })
+  }
+
+  if (effectiveStatus !== plan.status) {
+    await supabase.from('plans').update({ status: effectiveStatus }).eq('id', id)
+  }
+
+  return NextResponse.json({
+    ...plan,
+    visibility,
+    status: effectiveStatus,
+    require_approval: !!plan.approval_mode,
+    participants: participants || [],
+    current_user_id: auth.user?.id || null,
+  })
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -42,24 +62,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (existing.host_id !== auth.user.id) return NextResponse.json({ error: 'Only host can edit this plan' }, { status: 403 })
 
   const body = await request.json()
+  const visibility = body.visibility === 'invite_only' || body.visibility === 'private' ? 'invite_only' : body.visibility === 'public' ? 'public' : undefined
   const allowed: Record<string, any> = {
     title: body.title,
     description: body.description,
     location_name: body.location_name,
     city: body.city,
     datetime: body.datetime,
-    max_people: body.max_people ? Number(body.max_people) : undefined,
+    max_people: body.max_people !== undefined ? Number(body.max_people) : undefined,
     category: body.category,
-    visibility: body.visibility,
-    host_mode: body.host_mode,
-    approval_mode: body.approval_mode,
+    visibility,
+    host_mode: body.requireApproval ? 'host_managed' : 'open',
+    approval_mode: body.requireApproval,
     whatsapp_link: body.whatsapp_link,
     image_url: body.image_url,
     google_maps_link: body.google_maps_link,
-    show_payment_options: body.show_payment_options,
-    estimated_cost: body.estimated_cost ? Number(body.estimated_cost) : body.estimated_cost,
-    total_amount: body.total_amount ? Number(body.total_amount) : body.total_amount,
-    per_person_amount: body.per_person_amount ? Number(body.per_person_amount) : body.per_person_amount,
+    female_only: body.female_only,
+    cost_mode: body.cost_mode,
+    cost_amount: body.cost_amount !== undefined ? Number(body.cost_amount) : undefined,
+    final_amount: body.final_amount !== undefined ? Number(body.final_amount) : undefined,
     status: body.status,
   }
 

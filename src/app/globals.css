@@ -65,4 +65,14 @@ body {
     backdrop-filter: blur(8px);
     border: 1px solid rgba(26, 20, 16, 0.1);
   }
+
+  .skeleton {
+    background: linear-gradient(110deg, #eee5d8 8%, #f7f1e8 18%, #eee5d8 33%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  @keyframes shimmer {
+    to { background-position-x: -200%; }
+  }
 }

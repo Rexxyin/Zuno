@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { canonicalizeCity } from '@/lib/cities'
+import { computeEffectivePlanStatus, normalizeVisibility } from '@/lib/plan'
 
 export async function GET() {
   const cookieStore = await cookies()
@@ -10,50 +11,44 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('plans')
-    .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status,user:users(name))')
-    .gt('datetime', new Date().toISOString())
+    .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status,user:users(id,name,avatar_url))')
+    .eq('visibility', 'public')
+    .not('city', 'is', null)
     .order('datetime', { ascending: true })
-    .limit(50)
+    .limit(80)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const plans = (data || []).filter((plan: any) => {
-    if (plan.visibility !== 'private') return true
-    if (!auth.user) return false
-    if (plan.host_id === auth.user.id) return true
-    return (plan.participants || []).some((pp: any) => pp.user_id === auth.user.id && pp.status === 'joined')
-  })
+  const nowIso = new Date().toISOString()
+  const expiredIds = (data || []).filter((p: any) => p.datetime && p.datetime < nowIso && p.status !== 'expired').map((p: any) => p.id)
+  if (expiredIds.length) {
+    await supabase.from('plans').update({ status: 'expired' }).in('id', expiredIds)
+  }
+
+  const normalized = (data || [])
+    .map((p: any) => {
+      const effectiveStatus = computeEffectivePlanStatus(p)
+      if (effectiveStatus === 'expired') p.status = 'expired'
+      if (effectiveStatus === 'full') p.status = 'full'
+      return {
+        ...p,
+        visibility: normalizeVisibility(p.visibility),
+        require_approval: !!p.approval_mode,
+        status: effectiveStatus,
+        is_joined: !!auth.user && (p.participants || []).some((pp: any) => pp.user_id === auth.user.id && pp.status === 'joined'),
+        current_user_id: auth.user?.id || null,
+      }
+    })
+    .filter((p: any) => p.status !== 'expired')
 
   if (!auth.user) {
-    return NextResponse.json(
-      plans.map((p: any) => ({
-        ...p,
-        is_joined: false,
-        current_user_id: null,
-        joined_names: (p.participants || [])
-          .filter((pp: any) => pp.status === 'joined')
-          .map((pp: any) => pp.user?.name)
-          .filter(Boolean),
-      }))
-    )
+    return NextResponse.json(normalized.map((p: any) => ({ ...p, is_favorite: false })))
   }
 
   const { data: favorites } = await supabase.from('plan_favorites').select('plan_id').eq('user_id', auth.user.id)
-
   const favSet = new Set((favorites || []).map((f: any) => f.plan_id))
 
-  return NextResponse.json(
-      plans.map((p: any) => ({
-        ...p,
-        is_favorite: favSet.has(p.id),
-        is_joined: (p.participants || []).some((pp: any) => pp.user_id === auth.user?.id && pp.status === 'joined'),
-        current_user_id: auth.user?.id || null,
-        joined_names: (p.participants || [])
-        .filter((pp: any) => pp.status === 'joined')
-        .map((pp: any) => pp.user?.name)
-        .filter(Boolean),
-    }))
-  )
+  return NextResponse.json(normalized.map((p: any) => ({ ...p, is_favorite: favSet.has(p.id) })))
 }
 
 export async function POST(request: Request) {
@@ -66,8 +61,8 @@ export async function POST(request: Request) {
   const city = canonicalizeCity(body.city)
   if (!city) return NextResponse.json({ error: 'City is required' }, { status: 400 })
 
-  const visibility = body.visibility === 'private' ? 'private' : 'public'
-  const hostMode = visibility === 'private' ? 'host_managed' : body.host_mode === 'open' ? 'open' : 'host_managed'
+  const visibility = body.visibility === 'invite_only' || body.visibility === 'private' ? 'invite_only' : 'public'
+  const requireApproval = visibility === 'public' ? !!body.requireApproval : false
   const payload = {
     host_id: auth.user.id,
     title: body.title,
@@ -76,24 +71,24 @@ export async function POST(request: Request) {
     location_name: body.location_name,
     city,
     datetime: body.datetime,
-    max_people: Math.max(Number(body.max_people || 8), 1),
+    max_people: Math.max(Number(body.max_people ?? 0), 0),
     whatsapp_link: body.whatsapp_link || '',
-    approval_mode: hostMode === 'open' ? false : !!body.approval_mode,
+    approval_mode: requireApproval,
     female_only: !!body.female_only,
     image_url: body.image_url || null,
     google_maps_link: body.google_maps_link || null,
-    show_payment_options: !!body.show_payment_options,
-    estimated_cost: body.estimated_cost ? Number(body.estimated_cost) : null,
     visibility,
-    host_mode: hostMode,
-    total_amount: body.total_amount ? Number(body.total_amount) : null,
-    per_person_amount: body.per_person_amount ? Number(body.per_person_amount) : null,
+    host_mode: requireApproval ? 'host_managed' : 'open',
+    cost_mode: body.cost_mode || null,
+    cost_amount: body.cost_amount ? Number(body.cost_amount) : null,
+    final_amount: null,
+    status: 'open',
   }
 
   let { data, error } = await supabase.from('plans').insert(payload).select().single()
 
-  if (error && /(google_maps_link|show_payment_options|estimated_cost|visibility|host_mode|total_amount|per_person_amount)/.test(error.message)) {
-    const { google_maps_link, show_payment_options, estimated_cost, visibility, host_mode, total_amount, per_person_amount, ...fallbackPayload } = payload
+  if (error && /(cost_mode|cost_amount|final_amount|visibility|host_mode)/.test(error.message)) {
+    const { cost_mode, cost_amount, final_amount, ...fallbackPayload } = payload
     const retry = await supabase.from('plans').insert(fallbackPayload).select().single()
     data = retry.data
     error = retry.error
