@@ -70,27 +70,121 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
-      <Suspense fallback={null}><SearchParamHandler onSignin={() => setShowAuthDialog(true)} /></Suspense>
+    <div
+      className="min-h-screen pb-24 bg-[#F4EFEA]"
+      style={{ fontFamily: 'DM Sans, Inter, sans-serif' }}
+    >
+      <Suspense fallback={null}>
+        <SearchParamHandler onSignin={() => setShowAuthDialog(true)} />
+      </Suspense>
 
-      <div className="sticky top-0 z-40 border-b app-card app-surface pb-3 pt-4 overflow-visible">
-        <div className="mx-auto max-w-md px-4 overflow-visible">
-          <div className="mb-4 flex items-center justify-between"><h1 className="text-2xl font-extrabold text-[#1a1410]">Discover</h1></div>
-          <div className="relative mb-3">
+      {/* HEADER */}
+      <div className="sticky top-0 z-40 bg-[#F4EFEA]">
+        <div className="mx-auto max-w-md px-4 pt-5 pb-3">
+  <div className="mb-4">
+            <h1 className="text-[22px] font-semibold text-[#3A2E2A] tracking-[-0.01em]">
+              Discover plans
+            </h1>
+            <p className="mt-1 text-[13px] text-[#7A6A64]">
+              Join something nearby or create your own plans.
+            </p>
+          </div>
+
+          {/* SEARCH */}
+          <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8f8272]" />
-            <input type="text" placeholder="Search plans..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-xl border app-card bg-[#f5efe5] py-2.5 pl-9 pr-3 text-sm" />
+            <input
+              type="text"
+              placeholder="Search plans"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-full bg-[#EFE7DA] py-2.5 pl-9 pr-3 text-[13px] outline-none placeholder:text-[#9C8F88]"
+            />
+          </div>
+        </div>
+
+        {/* CATEGORY PILLS */}
+      <div className="border-b bg-[#f9f9f9]"><div className="mx-auto max-w-md px-4 py-3"><div className="flex gap-2 flex-wrap">
+
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-medium whitespace-nowrap ${
+                selectedCategory === null
+                  ? "bg-[#5A3825] text-white"
+                  : "bg-[#EFE7DA] text-[#5A3825]"
+              }`}
+            >
+              All
+            </button>
+
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium whitespace-nowrap ${
+                  selectedCategory === cat
+                    ? "bg-[#5A3825] text-white"
+                    : "bg-[#EFE7DA] text-[#5A3825]"
+                }`}
+              >
+                <CategoryIcon icon={CATEGORY_META[cat].icon} className="h-3.5 w-3.5" />
+                {CATEGORY_META[cat].label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
+      </div>
 
-      <div className="border-b bg-[#f5efe6]"><div className="mx-auto max-w-md px-4 py-3"><div className="flex gap-2 flex-wrap">
-        <button onClick={() => setSelectedCategory(null)} className={`rounded-full px-3 py-1 text-xs font-bold ${selectedCategory === null ? "bg-black text-white" : "bg-white"}`}>All</button>
-        {categories.map((cat) => <button key={cat} onClick={() => setSelectedCategory(cat)} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${selectedCategory === cat ? "bg-[#d4522a] text-white" : "bg-white"}`}><CategoryIcon icon={CATEGORY_META[cat].icon} className="h-3.5 w-3.5" />{CATEGORY_META[cat].label}</button>)}
-      </div></div></div>
-
+      {/* FEED */}
       <div className="mx-auto max-w-md px-4 py-4">
-        {loading ? <div className="space-y-3">{[1, 2, 3].map((i) => <PlanCardSkeleton key={i} />)}</div> : visiblePlans.length === 0 ? <div className="py-12 text-center"><p className="text-sm text-[#75685c]">No plans around you yet.</p><Link href="/plans/create" className="mt-4 inline-flex rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm">Create a plan today ✨</Link></div> : <div className="grid gap-3">{visiblePlans.map((plan) => <PlanCard key={plan.id} plan={plan} onToggleFavorite={() => toggleFavorite(plan)} isAuthed={isAuthed} />)}</div>}
-        {!isAuthed && filteredPlans.length > 5 && <div className="mt-4 text-center"><button onClick={() => setShowAuthDialog(true)} className="bg-black text-white px-4 py-2 rounded-lg"><Lock className="inline h-4 w-4 mr-1" />Unlock {lockedCount} more</button></div>}
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <PlanCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : visiblePlans.length === 0 ? (
+
+          <div className="py-14 text-center">
+            <p className="text-[13px] text-[#7A6A64]">
+              No plans around you yet.
+            </p>
+
+               <Link
+              href="/plans/create"
+              className="mt-4 inline-flex rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2.5 text-[13px] font-semibold text-white"
+            >
+              Create your first plan
+            </Link>
+          </div>
+
+        ) : (
+          <div className="space-y-3">
+            {visiblePlans.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                onToggleFavorite={() => toggleFavorite(plan)}
+                isAuthed={isAuthed}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* LOCK */}
+        {!isAuthed && filteredPlans.length > 5 && (
+          <div className="mt-5 text-center">
+            <button
+              onClick={() => setShowAuthDialog(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#5A3825] px-4 py-2 text-[13px] text-white"
+            >
+              <Lock className="h-4 w-4" />
+              Unlock {lockedCount} more
+            </button>
+          </div>
+        )}
       </div>
 
       <SignInDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} nextPath="/feed" />
