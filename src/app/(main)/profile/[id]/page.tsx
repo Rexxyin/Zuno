@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [authUserId, setAuthUserId] = useState<string | null>(null)
   const [edit, setEdit] = useState<EditableProfile>({
     name: '',
     avatarUrl: '',
@@ -39,7 +40,7 @@ export default function ProfilePage() {
     email: '',
     avatarSeed: '',
   })
-  const isOwnProfile = id === 'me' || !id
+  const isOwnProfile = !!authUserId && (id === 'me' || !id || id === authUserId)
 
   const applyProfileToForm = (profile: User) => {
     setEdit({
@@ -64,6 +65,7 @@ export default function ProfilePage() {
       router.push('/login')
       return
     }
+    setAuthUserId(authUser.id)
 
     const targetId = isOwnProfile ? authUser.id : id
     const { data } = await supabase.from('users').select('*').eq('id', targetId).single()

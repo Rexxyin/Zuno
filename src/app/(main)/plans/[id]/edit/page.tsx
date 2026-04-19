@@ -41,8 +41,8 @@ export default function EditPlanPage() {
     load();
   }, [id, router]);
 
-    const handleDescriptionChange = (html: string) => {
-    setForm((prev:any) => ({ ...prev, description: html }));
+  const handleDescriptionChange = (html: string) => {
+    setForm((prev: any) => ({ ...prev, description: html }));
   };
 
   const update = (key: string, value: any) =>
@@ -93,18 +93,12 @@ export default function EditPlanPage() {
             placeholder="Plan title"
             className="w-full rounded-xl border app-card px-3 py-2.5"
           />
-          {/* <textarea
+
+          <RichTextEditor
             value={form.description || ""}
-            onChange={(e) => update("description", e.target.value)}
+            onChange={handleDescriptionChange}
             placeholder="Plan details"
-            className="w-full rounded-xl border app-card px-3 py-2.5"
-            rows={3}
-          /> */}
-                 <RichTextEditor
-              value={form.description || ""}
-              onChange={handleDescriptionChange}
-              placeholder="Plan details"
-            />
+          />
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(CATEGORY_META) as PlanCategory[]).map((cat) => (
               <button
@@ -151,9 +145,25 @@ export default function EditPlanPage() {
           </div>
           <input
             type="number"
-            min={0}
-            value={form.max_people || 0}
-            onChange={(e) => update("max_people", Number(e.target.value))}
+            min={1}
+            step="1"
+            inputMode="numeric"
+            value={form.max_people ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+
+              if (v === "") {
+                update("max_people", ""); // allow clearing
+              } else {
+                const num = Number(v);
+                if (num >= 1) {
+                  update("max_people", num);
+                }
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "-" || e.key === "e") e.preventDefault();
+            }}
             className="w-full rounded-xl border app-card px-3 py-2.5"
             placeholder="Max spots"
           />

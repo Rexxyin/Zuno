@@ -529,7 +529,7 @@ export function RichTextDisplay({
   return (
     <>
       <style>{`
-        .rtd { font-size: 14px; line-height: 1.65; font-family: 'DM Sans', sans-serif; word-break: break-word; }
+        .rtd { font-size: 14px; line-height: 1.65; font-family: 'DM Sans', sans-serif; word-break: break-word; padding:10px 4px }
 
         /* Dark (hero) */
         .rtd-dark { color: rgba(255,255,255,0.88); }

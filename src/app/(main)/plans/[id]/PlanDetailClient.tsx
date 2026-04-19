@@ -27,6 +27,8 @@ import { toast } from "@/components/ui/toast";
 import { BottomNav } from "@/components/BottomNav";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
+import { CATEGORY_META } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   computeEffectivePlanStatus,
   statusBadge,
@@ -76,15 +78,15 @@ export default function PlanDetailClient({ initialPlan }: any) {
     : plan.cost_amount && plan.cost_mode === "total"
       ? Number(plan.cost_amount)
       : plan.cost_amount
-        ? Number(plan.cost_amount) * Math.max(joinedCount + 1, 1)
+        ? Number(plan.cost_amount) * Math.max(joinedCount, 1)
         : null;
 
   const perPersonShare = useMemo(() => {
     if (plan.final_amount)
-      return Number(plan.final_amount) / Math.max(joinedCount + 1, 1);
+      return Number(plan.final_amount) / Math.max(joinedCount, 1);
     if (!plan.cost_amount) return null;
     if (plan.cost_mode === "total")
-      return Number(plan.cost_amount) / Math.max(joinedCount + 1, 1);
+      return Number(plan.cost_amount) / Math.max(joinedCount, 1);
     return Number(plan.cost_amount);
   }, [plan.final_amount, plan.cost_amount, plan.cost_mode, joinedCount]);
 
@@ -495,7 +497,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
         }
         .pd-cost-amount {
           
-          font-size: 26px; font-weight: 700; color: #1a1410;
+          font-size: 20px; font-weight: 700; color: #1a1410;
         }
         .pd-cost-per { font-size: 13px; font-weight: 400; color: #8b7b6d; }
         .pd-cost-badge {
@@ -710,7 +712,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
             <h1 className="pd-title">{plan.title}</h1>
             <div className="pd-pills">
               {plan.category && (
-                <span className="pd-pill pp-dark">{plan.category}</span>
+                <span className="pd-pill pp-dark" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <CategoryIcon
+                    icon={CATEGORY_META[plan.category as keyof typeof CATEGORY_META]?.icon || "sparkles"}
+                    className="h-3 w-3"
+                  />
+                  {CATEGORY_META[plan.category as keyof typeof CATEGORY_META]?.label || plan.category}
+                </span>
               )}
               {badge && (
                 <span
@@ -928,7 +936,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
               </div>
               <p className="pd-cost-note">
                 <Info size={12} />
-                Total ₹{activeAmount?.toFixed(0)} · {joinedCount + 1} people
+                Total ₹{activeAmount?.toFixed(0)} · {joinedCount} people
                 {plan.final_amount ? " · confirmed by host" : " · may change"}
               </p>
 
@@ -1047,7 +1055,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                   </button>
                 )}
                 {(effectiveStatus === "open" ||
-                  effectiveStatus === "expired") && (
+                  effectiveStatus === "expired") &&(plan.cost_amount>0 || plan.final_amount>0) && (
                   <button
                     type="button"
                     onClick={confirmFinalAmount}
