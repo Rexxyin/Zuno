@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/components/ui/toast";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Info } from "lucide-react";
 import { CATEGORY_META } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import type { PlanCategory } from "@/lib/types";
-import { RichTextEditor, RichTextDisplay } from "@/components/RichTextEditor";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { INDIA_HIGH_POTENTIAL_CITIES } from "@/lib/cities";
 
 export default function EditPlanPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function EditPlanPage() {
   const [form, setForm] = useState<any>({
     cost_mode: "per_person",
     visibility: "public",
+    host_included_in_spots_and_splits: true,
   });
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function EditPlanPage() {
   if (loading) return <div className="p-4">Loading...</div>;
 
   return (
-    <div className="min-h-screen px-4 py-4 pb-16">
+    <div className="min-h-screen bg-[#F4EFEA] px-4 py-4 pb-24 text-sm">
       <div className="mx-auto max-w-md space-y-3">
         <div className="mb-2 flex items-center justify-between">
           <button
@@ -86,7 +88,7 @@ export default function EditPlanPage() {
           <div className="h-8 w-8" />
         </div>
 
-        <div className="space-y-3 rounded-2xl border app-card p-4 text-sm">
+        <div className="space-y-3 rounded-2xl border border-[#e2d9ce] bg-[#EFE7DA] p-4 text-sm">
           <input
             value={form.title || ""}
             onChange={(e) => update("title", e.target.value)}
@@ -117,6 +119,15 @@ export default function EditPlanPage() {
               </button>
             ))}
           </div>
+          <select
+            value={form.city || ""}
+            onChange={(e) => update("city", e.target.value)}
+            className="w-full rounded-xl bg-[#F7F1E8] px-3 py-2.5 text-sm text-[#3A2E2A] outline-none"
+          >
+            {INDIA_HIGH_POTENTIAL_CITIES.map((city) => (
+              <option key={city}>{city}</option>
+            ))}
+          </select>
           <input
             value={form.location_name || ""}
             onChange={(e) => update("location_name", e.target.value)}
@@ -171,7 +182,7 @@ export default function EditPlanPage() {
             <button
               type="button"
               onClick={() => update("visibility", "public")}
-              className={`rounded-xl border px-3 py-2 text-xs ${form.visibility === "public" ? "bg-black text-white border-black" : "app-card"}`}
+              className={`rounded-xl border px-3 py-2 text-xs ${form.visibility === "public" ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
             >
               Public
             </button>
@@ -181,7 +192,7 @@ export default function EditPlanPage() {
                 update("visibility", "invite_only");
                 update("requireApproval", false);
               }}
-              className={`rounded-xl border px-3 py-2 text-xs ${form.visibility !== "public" ? "bg-black text-white border-black" : "app-card"}`}
+              className={`rounded-xl border px-3 py-2 text-xs ${form.visibility !== "public" ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
             >
               Private
             </button>
@@ -191,14 +202,14 @@ export default function EditPlanPage() {
               <button
                 type="button"
                 onClick={() => update("requireApproval", true)}
-                className={`rounded-xl border px-3 py-2 text-xs ${form.requireApproval ? "bg-black text-white border-black" : "app-card"}`}
+                className={`rounded-xl border px-3 py-2 text-xs ${form.requireApproval ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
               >
                 Host manages requests
               </button>
               <button
                 type="button"
                 onClick={() => update("requireApproval", false)}
-                className={`rounded-xl border px-3 py-2 text-xs ${!form.requireApproval ? "bg-black text-white border-black" : "app-card"}`}
+                className={`rounded-xl border px-3 py-2 text-xs ${!form.requireApproval ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
               >
                 Open to everyone
               </button>
@@ -214,17 +225,35 @@ export default function EditPlanPage() {
             <button
               type="button"
               onClick={() => update("cost_mode", "per_person")}
-              className={`rounded-xl border px-3 py-2 text-xs ${form.cost_mode === "per_person" ? "bg-black text-white border-black" : "app-card"}`}
+              className={`rounded-xl border px-3 py-2 text-xs ${form.cost_mode === "per_person" ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
             >
               Per person
             </button>
             <button
               type="button"
               onClick={() => update("cost_mode", "total")}
-              className={`rounded-xl border px-3 py-2 text-xs ${form.cost_mode === "total" ? "bg-black text-white border-black" : "app-card"}`}
+              className={`rounded-xl border px-3 py-2 text-xs ${form.cost_mode === "total" ? "bg-[#5A3825] text-white border-[#5A3825]" : "app-card"}`}
             >
               Total
             </button>
+          </div>
+          <div className="rounded-xl bg-[#F7F1E8] px-3 py-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-start gap-1">
+                <Info className="mt-0.5 h-3.5 w-3.5 text-[#7A6A64]" />
+                <div>
+                  <p className="text-xs font-medium text-[#3A2E2A]">Include host in spots & split</p>
+                  <p className="text-[11px] text-[#7A6A64]">If off, host is excluded from both calculations.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => update("host_included_in_spots_and_splits", !form.host_included_in_spots_and_splits)}
+                className={`relative h-6 w-11 rounded-full transition-colors ${form.host_included_in_spots_and_splits ? "bg-[#5A3825]" : "bg-[#d5c9ba]"}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${form.host_included_in_spots_and_splits ? "translate-x-5" : "translate-x-0.5"}`} />
+              </button>
+            </div>
           </div>
           <input
             type="number"
@@ -250,7 +279,7 @@ export default function EditPlanPage() {
           <button
             onClick={save}
             disabled={saving}
-            className="w-full rounded-lg bg-black py-2 font-semibold text-white"
+            className="w-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 py-2.5 font-semibold text-white"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

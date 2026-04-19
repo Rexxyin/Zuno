@@ -86,6 +86,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     cost_mode: body.cost_mode,
     cost_amount: body.cost_amount !== undefined ? Number(body.cost_amount) : undefined,
     final_amount: body.final_amount !== undefined ? Number(body.final_amount) : undefined,
+    host_included_in_spots_and_splits: body.host_included_in_spots_and_splits === undefined ? undefined : !!body.host_included_in_spots_and_splits,
     status: mapPlanStatus(body.status),
   }
 

@@ -62,7 +62,9 @@ export default function PlanDetailClient({ initialPlan }: any) {
   );
   const joinedCount = joinedParticipants.length;
   const maxSpots = Number(plan.max_people || 0);
-  const spotsOpen = Math.max(maxSpots - joinedCount, 0);
+  const hostIncluded = plan.host_included_in_spots_and_splits !== false;
+  const participantCapacity = Math.max(hostIncluded ? maxSpots - 1 : maxSpots, 0);
+  const spotsOpen = Math.max(participantCapacity - joinedCount, 0);
   const effectiveStatus = computeEffectivePlanStatus(plan);
   const badge = statusBadge(effectiveStatus);
   const planDate = useMemo(
@@ -70,7 +72,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
     [plan.datetime],
   );
   const fillPercent =
-    maxSpots > 0 ? Math.round((joinedCount / maxSpots) * 100) : 0;
+    participantCapacity > 0 ? Math.round((joinedCount / participantCapacity) * 100) : 0;
 
   // Use final_amount if available, else estimate
   const activeAmount = plan.final_amount
@@ -78,17 +80,17 @@ export default function PlanDetailClient({ initialPlan }: any) {
     : plan.cost_amount && plan.cost_mode === "total"
       ? Number(plan.cost_amount)
       : plan.cost_amount
-        ? Number(plan.cost_amount) * Math.max(joinedCount, 1)
+        ? Number(plan.cost_amount) * Math.max(hostIncluded ? joinedCount + 1 : joinedCount, 1)
         : null;
 
   const perPersonShare = useMemo(() => {
     if (plan.final_amount)
-      return Number(plan.final_amount) / Math.max(joinedCount, 1);
+      return Number(plan.final_amount) / Math.max(hostIncluded ? joinedCount + 1 : joinedCount, 1);
     if (!plan.cost_amount) return null;
     if (plan.cost_mode === "total")
-      return Number(plan.cost_amount) / Math.max(joinedCount, 1);
+      return Number(plan.cost_amount) / Math.max(hostIncluded ? joinedCount + 1 : joinedCount, 1);
     return Number(plan.cost_amount);
-  }, [plan.final_amount, plan.cost_amount, plan.cost_mode, joinedCount]);
+  }, [plan.final_amount, plan.cost_amount, plan.cost_mode, joinedCount, hostIncluded]);
 
   const upiLink =
     plan.host?.gpay_link && perPersonShare
@@ -825,6 +827,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
               <p className="pd-info-lbl">Group size</p>
               <p className="pd-info-val">{joinedCount} joined</p>
               <p className="pd-info-sub">{spotsOpen} spots open</p>
+              <p className="pd-info-sub">Host {hostIncluded ? "included" : "excluded"} in spots & split</p>
             </div>
           </div>
 
@@ -857,7 +860,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             >
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#1a1410" }}>
-                  {joinedCount} / {maxSpots} spots filled
+                  {joinedCount} / {participantCapacity} participant spots filled
                 </p>
                 <p style={{ fontSize: 11, color: "#8b7b6d", marginTop: 1 }}>
                   {spotsOpen === 0
@@ -936,7 +939,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
               </div>
               <p className="pd-cost-note">
                 <Info size={12} />
-                Total ₹{activeAmount?.toFixed(0)} · {joinedCount} people
+                Total ₹{activeAmount?.toFixed(0)} · {hostIncluded ? joinedCount + 1 : joinedCount} people
                 {plan.final_amount ? " · confirmed by host" : " · may change"}
               </p>
 

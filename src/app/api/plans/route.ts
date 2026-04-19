@@ -97,6 +97,7 @@ export async function POST(request: Request) {
     cost_mode: body.cost_mode || null,
     cost_amount: body.cost_amount ? Number(body.cost_amount) : null,
     final_amount: null,
+    host_included_in_spots_and_splits: body.host_included_in_spots_and_splits !== false,
     status: 'active',
   }
 

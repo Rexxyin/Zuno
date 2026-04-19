@@ -49,6 +49,7 @@ export interface Plan {
   cost_mode?: 'per_person' | 'total' | null
   cost_amount?: number | null
   final_amount?: number | null
+  host_included_in_spots_and_splits?: boolean
   participant_count?: number
   is_joined?: boolean
   is_favorite?: boolean
