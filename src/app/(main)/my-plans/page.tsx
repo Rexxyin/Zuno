@@ -24,7 +24,7 @@ export default function MyPlansPage() {
         const { data: auth } = await createClient().auth.getUser()
         setUserId(auth.user?.id || null)
         setLoading(true)
-        const response = await fetch('/api/plans', { cache: 'no-store' })
+        const response = await fetch('/api/plans?includeMine=1', { cache: 'no-store' })
         const data = await response.json()
         setPlans(Array.isArray(data) ? data : [])
       } catch (error) {

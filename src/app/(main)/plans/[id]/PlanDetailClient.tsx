@@ -27,6 +27,8 @@ import { toast } from "@/components/ui/toast";
 import { BottomNav } from "@/components/BottomNav";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
+import { CATEGORY_META } from "@/lib/categories";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   computeEffectivePlanStatus,
   statusBadge,
@@ -710,7 +712,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
             <h1 className="pd-title">{plan.title}</h1>
             <div className="pd-pills">
               {plan.category && (
-                <span className="pd-pill pp-dark">{plan.category}</span>
+                <span className="pd-pill pp-dark" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                  <CategoryIcon
+                    icon={CATEGORY_META[plan.category as keyof typeof CATEGORY_META]?.icon || "sparkles"}
+                    className="h-3 w-3"
+                  />
+                  {CATEGORY_META[plan.category as keyof typeof CATEGORY_META]?.label || plan.category}
+                </span>
               )}
               {badge && (
                 <span

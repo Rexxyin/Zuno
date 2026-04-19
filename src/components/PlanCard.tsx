@@ -6,6 +6,7 @@ import { Heart, Share2, Users } from "lucide-react";
 import { Plan } from "@/lib/types";
 import { CATEGORY_META } from "@/lib/categories";
 import { parseDatetimeLocal, formatDate, formatTime } from "@/lib/datetime";
+import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   computeEffectivePlanStatus,
   normalizeVisibility,
@@ -86,7 +87,14 @@ export function PlanCard({
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30" />
-          <div className="absolute left-3 top-3 rounded-full bg-[#faf8f4] px-3 py-1 text-[11px] font-semibold text-[#1a1410]">
+          <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[#faf8f4] px-3 py-1 text-[11px] font-semibold text-[#1a1410]">
+            <CategoryIcon
+              icon={
+                CATEGORY_META[plan.category as keyof typeof CATEGORY_META]
+                  ?.icon || "sparkles"
+              }
+              className="h-3 w-3"
+            />
             {CATEGORY_META[plan.category as keyof typeof CATEGORY_META]
               ?.label || "Plan"}
           </div>

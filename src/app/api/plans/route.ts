@@ -4,18 +4,41 @@ import { createClient } from '@/lib/supabase/server'
 import { canonicalizeCity } from '@/lib/cities'
 import { computeEffectivePlanStatus, normalizeVisibility } from '@/lib/plan'
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   const { data: auth } = await supabase.auth.getUser()
+  const { searchParams } = new URL(request.url)
+  const includeMine = searchParams.get('includeMine') === '1'
 
-  const { data, error } = await supabase
+  let scopedPlanIds: string[] = []
+  if (includeMine && auth.user) {
+    const { data: joinedRows } = await supabase
+      .from('plan_participants')
+      .select('plan_id')
+      .eq('user_id', auth.user.id)
+      .eq('status', 'joined')
+
+    scopedPlanIds = Array.from(new Set((joinedRows || []).map((row: any) => row.plan_id).filter(Boolean)))
+  }
+
+  let query = supabase
     .from('plans')
     .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status,user:users(id,name,avatar_url))')
-    .eq('visibility', 'public')
     .not('city', 'is', null)
     .order('datetime', { ascending: true })
     .limit(80)
+
+  if (includeMine && auth.user) {
+    const mineFilter = scopedPlanIds.length
+      ? `visibility.eq.public,host_id.eq.${auth.user.id},id.in.(${scopedPlanIds.join(',')})`
+      : `visibility.eq.public,host_id.eq.${auth.user.id}`
+    query = query.or(mineFilter)
+  } else {
+    query = query.eq('visibility', 'public')
+  }
+
+  const { data, error } = await query
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
