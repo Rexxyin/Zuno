@@ -58,7 +58,7 @@ export function TopNav() {
   if (HIDE_TOP_NAV_ROUTES.includes(pathname)) return null;
 
   return (
-    <div className="sticky top-0 z-30 border-b border-black/5 bg-[#faf8f4]/90 backdrop-blur-md">
+    <div className="sticky top-0 z-50 border-b border-black/5 bg-[#faf8f4]/90 backdrop-blur-md">
       <div className="mx-auto max-w-md px-4 py-3">
         <div className="flex items-center justify-between">
           {/* LEFT: BRAND */}

@@ -222,7 +222,6 @@ export default function ProfilePage() {
           {user.phone_verified && (
             <p className="text-xs text-emerald-600 mt-1">Verified profile</p>
           )}
-
         </div>
 
         {/* STATS */}
@@ -291,7 +290,6 @@ export default function ProfilePage() {
             <input
               placeholder="Payee Name"
               value={edit.upiPayeeName}
-              defaultValue={edit.name}
               onChange={(e) =>
                 setEdit({ ...edit, upiPayeeName: e.target.value })
               }

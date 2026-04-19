@@ -98,7 +98,7 @@ export default function FeedPage() {
       </Suspense>
 
       {/* HEADER */}
-      <div className="sticky top-0 z-40 bg-[#F4EFEA]">
+ <div className="sticky top-0 z-30 bg-[#F4EFEA]">
         <div className="mx-auto max-w-md px-4 pt-5 pb-3">
           <div className="mb-4">
             <h1 className="text-[22px] font-semibold text-[#3A2E2A] tracking-[-0.01em]">
