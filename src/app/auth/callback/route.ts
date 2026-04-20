@@ -34,12 +34,12 @@ export async function GET(request: Request) {
       await supabase.from('users').upsert(fallback)
     }
 
-    const { data: profile } = await supabase.from('users').select('name,gender,age,is_banned').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('users').select('name,gender,age,is_banned,phone_verified').eq('id', user.id).single()
 
     await logAudit(supabase, { actorId: user.id, eventType: 'signup', entityType: 'user', entityId: user.id })
 
     if (profile?.is_banned) return NextResponse.redirect(`${origin}/banned`)
-    const needsOnboarding = !(profile?.name && profile?.age)
+    const needsOnboarding = !(profile?.name && profile?.gender && profile?.age && profile?.phone_verified)
     if (needsOnboarding) return NextResponse.redirect(`${origin}/onboarding`)
   }
 

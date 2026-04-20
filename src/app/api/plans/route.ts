@@ -62,7 +62,7 @@ export async function GET(request: Request) {
         current_user_id: auth.user?.id || null,
       }
     })
-    .filter((p: any) => p.status !== 'expired')
+    .filter((p: any) => includeMine || p.status !== 'expired')
     .filter((p: any) => !blockedIds.has(String(p.host_id)))
 
   if (!auth.user) {

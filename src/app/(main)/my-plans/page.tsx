@@ -37,8 +37,8 @@ export default function MyPlansPage() {
 
   const now = Date.now()
   const hostedPlans = useMemo(() => plans.filter((p) => p.host_id === userId), [plans, userId])
-  const upcomingPlans = useMemo(() => plans.filter((p) => p.is_joined && +new Date(p.datetime) > now && computeEffectivePlanStatus(p as any) !== 'expired'), [plans, now])
-  const pastPlans = useMemo(() => plans.filter((p) => p.is_joined && (+new Date(p.datetime) < now || computeEffectivePlanStatus(p as any) === 'expired')), [plans, now])
+  const upcomingPlans = useMemo(() => plans.filter((p) => (p.is_joined || p.host_id === userId) && +new Date(p.datetime) > now && computeEffectivePlanStatus(p as any) !== 'expired'), [plans, now, userId])
+  const pastPlans = useMemo(() => plans.filter((p) => (p.is_joined || p.host_id === userId) && (+new Date(p.datetime) < now || computeEffectivePlanStatus(p as any) === 'expired')), [plans, now, userId])
   const favoritePlans = useMemo(() => plans.filter((p) => p.is_favorite), [plans])
 
   const pendingHostedRequests = hostedPlans.reduce((sum, plan) => sum + (plan.participants || []).filter((p: any) => p.status === 'pending').length, 0)

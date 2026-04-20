@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,6 +26,7 @@ import {
 import { toast } from "@/components/ui/toast";
 import { BottomNav } from "@/components/BottomNav";
 import { RichTextDisplay } from "@/components/RichTextEditor";
+import { ActionDialog } from "@/components/ui/ActionDialog";
 import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
 import { CATEGORY_META } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
@@ -54,6 +55,17 @@ export default function PlanDetailClient({ initialPlan }: any) {
     plan.settlements || [],
   );
   const [descOpen, setDescOpen] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showFinalAmountDialog, setShowFinalAmountDialog] = useState(false);
+  const [finalAmountInput, setFinalAmountInput] = useState("");
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState("unsafe_plan");
+  const [reportDetails, setReportDetails] = useState("");
+  const [hasReportedPlan, setHasReportedPlan] = useState(false);
+  const [showRemoveDialogFor, setShowRemoveDialogFor] = useState<string | null>(null);
+  const [showSafetyDialog, setShowSafetyDialog] = useState(false);
 
   const isHost = plan.current_user_id === plan.host_id;
   const isParticipant = (plan.participants || []).some(
@@ -107,6 +119,15 @@ export default function PlanDetailClient({ initialPlan }: any) {
     plan.host?.gpay_link && perPersonShare
       ? `upi://pay?pa=${encodeURIComponent(plan.host.gpay_link)}&pn=${encodeURIComponent(plan.host?.upi_payee_name || plan.host?.name || "Host")}&am=${encodeURIComponent(perPersonShare.toFixed(2))}&cu=INR&tn=${encodeURIComponent(`ZunoPlan:${plan.title}`)}`
       : null;
+
+  useEffect(() => {
+    if (isHost) return
+    fetch(`/api/reports?targetType=plan&targetId=${plan.id}`)
+      .then((res) => res.json())
+      .then((data) => setHasReportedPlan(!!data?.hasOpenReport))
+      .catch(() => {})
+  }, [isHost, plan.id]);
+
   const mapLink = useMemo(() => {
     if (plan.latitude && plan.longitude) {
       return `https://www.google.com/maps?q=${plan.latitude},${plan.longitude}`;
@@ -145,7 +166,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const leave = async () => {
-    if (!confirm("Leave this plan?")) return;
     setBusy("leave");
     const res = await fetch(`/api/plans/${plan.id}/leave`, { method: "POST" });
     if (res.ok) {
@@ -156,12 +176,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const closePlan = async () => {
-    if (
-      !confirm(
-        "Close this plan? People won't be able to join anymore, but existing participants stay.",
-      )
-    )
-      return;
     setBusy("close");
     const res = await fetch(`/api/plans/${plan.id}`, {
       method: "PATCH",
@@ -176,12 +190,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const deletePlan = async () => {
-    if (
-      !confirm(
-        "Delete this plan? This permanently removes the plan for everyone.",
-      )
-    )
-      return;
     setBusy("delete");
     const res = await fetch(`/api/plans/${plan.id}`, { method: "DELETE" });
     if (res.ok) router.push("/my-plans");
@@ -190,19 +198,19 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const confirmFinalAmount = async () => {
-    const value = prompt(
-      "Enter final total amount",
-      plan.final_amount || plan.cost_amount || "",
-    );
-    if (!value) return;
+    if (!finalAmountInput || Number(finalAmountInput) <= 0) {
+      toast.error("Enter a valid final amount");
+      return;
+    }
     setBusy("final");
     const res = await fetch(`/api/plans/${plan.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ final_amount: Number(value) }),
+      body: JSON.stringify({ final_amount: Number(finalAmountInput) }),
     });
     if (res.ok) {
       toast.success("Final amount confirmed");
+      setShowFinalAmountDialog(false);
       await refreshPlan();
     } else toast.error("Failed to confirm final amount");
     setBusy(null);
@@ -231,20 +239,21 @@ export default function PlanDetailClient({ initialPlan }: any) {
 
 
   const reportPlan = async () => {
-    const reason = prompt('Report reason: fake_profile | harassment | unsafe_plan | spam | other', 'unsafe_plan') || 'unsafe_plan';
-    const details = prompt('Add details (optional)', '') || '';
     const res = await fetch('/api/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetType: 'plan', targetPlanId: plan.id, reason, details }),
+      body: JSON.stringify({ targetType: 'plan', targetPlanId: plan.id, reason: reportReason, details: reportDetails.trim() }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) toast.error(data.error || 'Unable to submit report');
-    else toast.success(data.message || "Thanks, we'll review this.");
+    else {
+      setHasReportedPlan(true);
+      setShowReportDialog(false);
+      toast.success(data.message || "Report submitted. You can leave this plan anytime if you feel unsafe.");
+    }
   };
 
   const removeParticipant = async (userId: string) => {
-    if (!confirm('Remove this participant from the plan?')) return;
     setBusy(`remove-${userId}`);
     const res = await fetch(`/api/plans/${plan.id}/remove-participant`, {
       method: 'POST',
@@ -255,6 +264,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
     if (!res.ok) toast.error(data.error || 'Unable to remove participant');
     else {
       toast.success('Participant removed');
+      setShowRemoveDialogFor(null);
       await refreshPlan();
     }
     setBusy(null);
@@ -829,8 +839,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 <ExternalLink size={10} /> View profile
               </Link>
               {!isHost && (
-                <button onClick={reportPlan} className="pd-profile-btn" type="button">
-                  Report plan
+                <button onClick={() => setShowReportDialog(true)} className="pd-profile-btn" type="button" disabled={hasReportedPlan}>
+                  {hasReportedPlan ? "Reported" : "Report plan"}
                 </button>
               )}
             </div>
@@ -998,7 +1008,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
               </p>
 
               {/* Participant pay actions — only when final amount set */}
-              {isParticipant && !!plan.final_amount && (
+              {isParticipant && !!plan.final_amount && !!upiLink && (
                 <div className="pd-pay-row">
                   <a href={upiLink || "#"} className="pd-pay-upi">
                     💳 Pay via UPI
@@ -1060,7 +1070,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                             {isHost && String(p.user_id) !== String(plan.host_id) && (
                               <button
                                 type="button"
-                                onClick={() => removeParticipant(p.user_id)}
+                                onClick={() => setShowRemoveDialogFor(p.user_id)}
                                 style={{ border: "1px solid #e5d7ca", borderRadius: 999, padding: "4px 8px", fontSize: 11 }}
                                 disabled={busy === `remove-${p.user_id}`}
                               >
@@ -1127,7 +1137,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                   effectiveStatus === "expired") &&(plan.cost_amount>0 || plan.final_amount>0) && (
                   <button
                     type="button"
-                    onClick={confirmFinalAmount}
+                    onClick={() => { setFinalAmountInput(String(plan.final_amount || plan.cost_amount || "")); setShowFinalAmountDialog(true); }}
                     disabled={busy === "final"}
                     className="pd-ctrl-btn cc-final pd-ctrl-full"
                   >
@@ -1136,7 +1146,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 )}
                 <button
                   type="button"
-                  onClick={closePlan}
+                  onClick={() => setShowCloseDialog(true)}
                   disabled={busy === "close"}
                   className="pd-ctrl-btn cc-close"
                 >
@@ -1144,7 +1154,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 </button>
                 <button
                   type="button"
-                  onClick={deletePlan}
+                  onClick={() => setShowDeleteDialog(true)}
                   disabled={busy === "delete"}
                   className="pd-ctrl-btn cc-delete"
                 >
@@ -1216,10 +1226,14 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 <CheckCircle2 size={12} /> You're in this plan!
               </div>
             )}
-            {isHost ? null : isParticipant ? (
+            {plan.removed_by_host_for_current_user ? (
+              <p style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: "#b91c1c" }}>
+                You were removed by the host and can’t rejoin this plan.
+              </p>
+            ) : isHost ? null : isParticipant ? (
               <button
                 type="button"
-                onClick={leave}
+                onClick={() => setShowLeaveDialog(true)}
                 disabled={busy === "leave"}
                 className="pd-btn-leave"
               >
@@ -1243,13 +1257,106 @@ export default function PlanDetailClient({ initialPlan }: any) {
                       ? "Please wait…"
                       : statusLabel(effectiveStatus)}
                 </button>
-                <p style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#8a7a70' }}>
-                  Meet in public places
-                </p>
+                <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#8a7a70', display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <span>Join responsibly</span>
+                  <button type="button" onClick={() => setShowSafetyDialog(true)} style={{ textDecoration: 'underline' }}>i</button>
+                </div>
               </>
             )}
           </div>
         </div>
+        <ActionDialog
+          open={showLeaveDialog}
+          onClose={() => setShowLeaveDialog(false)}
+          onConfirm={leave}
+          busy={busy === "leave"}
+          title="Leave this plan?"
+          description="You can join other plans anytime."
+          confirmLabel="Leave"
+          confirmTone="danger"
+        />
+        <ActionDialog
+          open={showCloseDialog}
+          onClose={() => setShowCloseDialog(false)}
+          onConfirm={closePlan}
+          busy={busy === "close"}
+          title="Close this plan?"
+          description="People won't be able to join anymore, but current participants stay."
+          confirmLabel="Close plan"
+        />
+        <ActionDialog
+          open={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
+          onConfirm={deletePlan}
+          busy={busy === "delete"}
+          title="Delete this plan?"
+          description="This permanently removes the plan for everyone."
+          confirmLabel="Delete"
+          confirmTone="danger"
+        />
+        <ActionDialog
+          open={showFinalAmountDialog}
+          onClose={() => setShowFinalAmountDialog(false)}
+          onConfirm={confirmFinalAmount}
+          busy={busy === "final"}
+          title="Confirm final total amount"
+          confirmLabel="Confirm"
+        >
+          <input
+            type="number"
+            value={finalAmountInput}
+            onChange={(e) => setFinalAmountInput(e.target.value)}
+            className="w-full rounded-lg border border-[#d7c6b5] bg-white px-3 py-2 text-sm"
+            placeholder="Enter total amount"
+          />
+        </ActionDialog>
+        <ActionDialog
+          open={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          onConfirm={reportPlan}
+          title="Report plan"
+          description="If something feels wrong, report it and leave immediately."
+          confirmLabel="Submit report"
+        >
+          <div className="space-y-2">
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full rounded-lg border border-[#d7c6b5] bg-white px-3 py-2 text-sm"
+            >
+              <option value="fake_profile">fake_profile</option>
+              <option value="harassment">harassment</option>
+              <option value="unsafe_plan">unsafe_plan</option>
+              <option value="spam">spam</option>
+              <option value="other">other</option>
+            </select>
+            <textarea
+              value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-[#d7c6b5] bg-white px-3 py-2 text-sm"
+              placeholder="Details (optional)"
+            />
+          </div>
+        </ActionDialog>
+        <ActionDialog
+          open={!!showRemoveDialogFor}
+          onClose={() => setShowRemoveDialogFor(null)}
+          onConfirm={() => showRemoveDialogFor ? removeParticipant(showRemoveDialogFor) : undefined}
+          busy={!!showRemoveDialogFor && busy === `remove-${showRemoveDialogFor}`}
+          title="Remove participant?"
+          description="They will be removed from this plan immediately."
+          confirmLabel="Remove"
+          confirmTone="danger"
+        />
+        <ActionDialog
+          open={showSafetyDialog}
+          onClose={() => setShowSafetyDialog(false)}
+          title="Safety reminder"
+          description="Meet in public places. Move ahead only if you feel safe and comfortable. If in doubt, leave the plan anytime — your safety comes first."
+          cancelLabel="Got it"
+        />
+
         <BottomNav />
       </div>
     </>

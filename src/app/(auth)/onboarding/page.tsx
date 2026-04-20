@@ -15,6 +15,10 @@ export default function OnboardingPage() {
   const [age, setAge] = useState('')
   const [phone, setPhone] = useState('')
   const [instagram, setInstagram] = useState('')
+  const [phoneVerified, setPhoneVerified] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [sendingOtp, setSendingOtp] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
 
   const [isAdult, setIsAdult] = useState(false)
   const [agreedTerms, setAgreedTerms] = useState(false)
@@ -26,7 +30,7 @@ export default function OnboardingPage() {
 
       const { data: profile } = await supabase
         .from('users')
-        .select('name,gender,age,phone_number,instagram_url')
+        .select('name,gender,age,phone_number,phone_verified,instagram_url')
         .eq('id', data.user.id)
         .single()
 
@@ -36,7 +40,7 @@ export default function OnboardingPage() {
         .eq('user_id', data.user.id)
         .maybeSingle()
 
-      if (profile?.name && profile?.age && consent?.is_adult && consent?.agreed_terms && consent?.acknowledged_safety_responsibility) {
+      if (profile?.name && profile?.gender && profile?.age && profile?.phone_verified && consent?.is_adult && consent?.agreed_terms && consent?.acknowledged_safety_responsibility) {
         router.replace('/feed')
         return
       }
@@ -45,6 +49,7 @@ export default function OnboardingPage() {
       setGender(profile?.gender || '')
       setAge(profile?.age ? String(profile.age) : '')
       setPhone(profile?.phone_number || '')
+      setPhoneVerified(!!profile?.phone_verified)
       setInstagram(profile?.instagram_url || '')
       setIsAdult(!!consent?.is_adult)
       setAgreedTerms(!!consent?.agreed_terms)
@@ -52,13 +57,53 @@ export default function OnboardingPage() {
     })
   }, [router, supabase])
 
+  const sendOtp = async () => {
+    if (!phone.trim()) return toast.error('Phone number is required for onboarding')
+    setSendingOtp(true)
+    const res = await fetch('/api/phone/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone.trim() }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to send OTP')
+    else toast.success('OTP sent')
+    setSendingOtp(false)
+  }
+
+  const verifyOtp = async () => {
+    if (!phone.trim()) return toast.error('Phone number is required')
+    if (!otpCode.trim()) return toast.error('Enter OTP code')
+    setVerifyingOtp(true)
+    const res = await fetch('/api/phone/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone.trim(), token: otpCode.trim() }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to verify OTP')
+    else {
+      toast.success('Phone verified')
+      setPhoneVerified(true)
+      setOtpCode('')
+    }
+    setVerifyingOtp(false)
+  }
+
   const submit = async () => {
     const { data } = await supabase.auth.getUser()
     if (!data.user) return
 
-    if (!name || !age) {
+    if (!name.trim() || !age || !gender) {
       toast.error('Missing required fields', {
-        description: 'Please fill name and age.',
+        description: 'Please fill name, gender, and age.',
+      })
+      return
+    }
+
+    if (!phone.trim() || !phoneVerified) {
+      toast.error('Phone verification required', {
+        description: 'Please verify your phone to continue onboarding.',
       })
       return
     }
@@ -73,10 +118,10 @@ export default function OnboardingPage() {
     const { error } = await supabase
       .from('users')
       .update({
-        name,
+        name: name.trim(),
         gender,
         age: Number(age),
-        phone_number: phone || null,
+        phone_number: phone.trim(),
         instagram_url: instagram || null,
         instagram_handle: instagram
           ? instagram.split('/').filter(Boolean).pop() || null
@@ -123,7 +168,7 @@ export default function OnboardingPage() {
             Before you continue
           </h1>
           <p className="mt-1.5 text-[13px] text-[#7A6A64] leading-[1.5]">
-            Zuno helps you discover and join plans. You decide what&apos;s right for you.
+            Complete onboarding with phone verification to keep Zuno safer.
           </p>
         </div>
 
@@ -140,7 +185,7 @@ export default function OnboardingPage() {
             onChange={(e) => setGender(e.target.value)}
             className="w-full rounded-xl bg-[#EFE7DA] px-3.5 py-2.5 text-[13px] outline-none text-[#3A2E2A]"
           >
-            <option value="">Gender (optional)</option>
+            <option value="">Gender (required)</option>
             <option>Female</option>
             <option>Male</option>
             <option>Other</option>
@@ -154,12 +199,37 @@ export default function OnboardingPage() {
             className="w-full rounded-xl bg-[#EFE7DA] px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[#9C8F88]"
           />
 
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone number (optional)"
-            className="w-full rounded-xl bg-[#EFE7DA] px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[#9C8F88]"
-          />
+          <div className="rounded-xl bg-[#EFE7DA] p-3 space-y-2">
+            <input
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                setPhoneVerified(false)
+              }}
+              placeholder="Phone number (required)"
+              className="w-full rounded-lg bg-white px-3 py-2.5 text-[13px] outline-none"
+            />
+            {!phoneVerified && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={sendOtp} className="rounded-lg bg-[#5A3825] text-white py-2 text-xs">
+                  {sendingOtp ? 'Sending...' : 'Send OTP'}
+                </button>
+                <input
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="Enter OTP"
+                  className="rounded-lg bg-white px-2 py-2 text-xs"
+                />
+              </div>
+            )}
+            {!phoneVerified ? (
+              <button onClick={verifyOtp} className="w-full rounded-lg border border-[#d7c6b5] py-2 text-xs">
+                {verifyingOtp ? 'Verifying...' : 'Verify phone'}
+              </button>
+            ) : (
+              <p className="text-xs text-emerald-700">✅ Phone verified</p>
+            )}
+          </div>
 
           <input
             value={instagram}
@@ -181,7 +251,7 @@ export default function OnboardingPage() {
             </label>
             <label className="flex items-start gap-2">
               <input type="checkbox" checked={safetyAck} onChange={(e) => setSafetyAck(e.target.checked)} className="mt-0.5" />
-              <span>I understand I am responsible for my safety</span>
+              <span>I understand I should proceed only if I feel safe and comfortable</span>
             </label>
           </div>
 

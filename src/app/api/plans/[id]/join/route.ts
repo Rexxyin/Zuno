@@ -42,6 +42,18 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
     return NextResponse.json({ error: 'This plan is private.' }, { status: 403 })
   }
 
+  const { data: existingMembership } = await supabase
+    .from('plan_participants')
+    .select('status,removed_by_host')
+    .eq('plan_id', id)
+    .eq('user_id', auth.user.id)
+    .maybeSingle()
+
+  if (existingMembership?.removed_by_host && existingMembership?.status === 'left') {
+    return NextResponse.json({ error: 'You were removed by the host and cannot rejoin this plan.' }, { status: 403 })
+  }
+
+
   const status = plan.approval_mode ? 'pending' : 'joined'
   const { error } = await supabase.from('plan_participants').upsert({ user_id: auth.user.id, plan_id: id, status, removed_by_host: false, removed_by_host_at: null, removed_by_host_user_id: null }, { onConflict: 'user_id,plan_id' })
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

@@ -55,11 +55,31 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, message: "Thanks, we'll review this." })
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const targetType = searchParams.get('targetType')
+  const targetId = searchParams.get('targetId')
+
+  if (targetType && targetId) {
+    const targetColumn = targetType === 'plan' ? 'target_plan_id' : targetType === 'profile' ? 'target_user_id' : null
+    if (!targetColumn) return NextResponse.json({ error: 'Invalid targetType' }, { status: 400 })
+
+    const { data, error } = await supabase
+      .from('safety_reports')
+      .select('id,status')
+      .eq('reporter_id', auth.user.id)
+      .eq(targetColumn, targetId)
+      .in('status', ['open', 'reviewing'])
+      .limit(1)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ hasOpenReport: !!(data && data.length) })
+  }
 
   const { data, error } = await supabase
     .from('safety_reports')
