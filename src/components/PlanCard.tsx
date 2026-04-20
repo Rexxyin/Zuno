@@ -45,6 +45,12 @@ export function PlanCard({
     (p: any) => p.status === "joined",
   );
   const joinedCount = getJoinedParticipantsCount(plan.participants);
+  const genderAggregate = joinedParticipants.reduce((acc: any, p: any) => {
+    const g = String(p.user?.gender || '').toLowerCase();
+    if (g === 'male') acc.male += 1;
+    else if (g === 'female') acc.female += 1;
+    return acc;
+  }, { male: 0, female: 0 });
   const participantCapacity = getParticipantCapacity(plan);
   const spotsLeft = Math.max(participantCapacity - joinedCount, 0);
   const effectiveStatus = computeEffectivePlanStatus(plan as any);
@@ -69,6 +75,7 @@ export function PlanCard({
     if (navigator.share)
       navigator.share({
         title: plan.title,
+        text: `${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left`,
         url: shareUrl,
       });
     else {
@@ -146,6 +153,11 @@ export function PlanCard({
           {scarcity && effectiveStatus === "open" && (
             <p className={`mt-1 text-xs font-semibold ${scarcity.cls}`}>
               {scarcity.text}
+            </p>
+          )}
+          {(genderAggregate.male + genderAggregate.female) > 0 && (
+            <p className="mt-1 text-[11px] text-[#8a7a70]">
+              {genderAggregate.male} men • {genderAggregate.female} women
             </p>
           )}
 

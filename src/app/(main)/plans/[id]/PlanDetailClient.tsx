@@ -64,6 +64,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
     (p: any) => p.status === "joined",
   );
   const joinedCount = getJoinedParticipantsCount(plan.participants);
+  const genderAggregate = joinedParticipants.reduce((acc: any, p: any) => {
+    const g = String(p.user?.gender || '').toLowerCase();
+    if (g === 'male') acc.male += 1;
+    else if (g === 'female') acc.female += 1;
+    else if (g) acc.other += 1;
+    return acc;
+  }, { male: 0, female: 0, other: 0 });
   const hostIncluded = isHostIncludedInSpots(plan);
   const participantCapacity = getParticipantCapacity(plan);
   const totalFilledCount = hostIncluded ? joinedCount + 1 : joinedCount;
@@ -220,6 +227,37 @@ export default function PlanDetailClient({ initialPlan }: any) {
       await loadRequests();
       await refreshPlan();
     }
+  };
+
+
+  const reportPlan = async () => {
+    const reason = prompt('Report reason: fake_profile | harassment | unsafe_plan | spam | other', 'unsafe_plan') || 'unsafe_plan';
+    const details = prompt('Add details (optional)', '') || '';
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'plan', targetPlanId: plan.id, reason, details }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) toast.error(data.error || 'Unable to submit report');
+    else toast.success(data.message || "Thanks, we'll review this.");
+  };
+
+  const removeParticipant = async (userId: string) => {
+    if (!confirm('Remove this participant from the plan?')) return;
+    setBusy(`remove-${userId}`);
+    const res = await fetch(`/api/plans/${plan.id}/remove-participant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) toast.error(data.error || 'Unable to remove participant');
+    else {
+      toast.success('Participant removed');
+      await refreshPlan();
+    }
+    setBusy(null);
   };
 
   const markSettled = async () => {
@@ -703,6 +741,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 if (navigator.share)
                   navigator.share({
                     title: plan.title,
+                    text: `${spotsOpen} spot${spotsOpen === 1 ? '' : 's'} left`,
                     url: window.location.href,
                   });
                 else {
@@ -789,6 +828,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
               >
                 <ExternalLink size={10} /> View profile
               </Link>
+              {!isHost && (
+                <button onClick={reportPlan} className="pd-profile-btn" type="button">
+                  Report plan
+                </button>
+              )}
             </div>
           </div>
 
@@ -871,6 +915,12 @@ export default function PlanDetailClient({ initialPlan }: any) {
                     ? "Fully booked"
                     : `${spotsOpen} ${spotsOpen === 1 ? "spot" : "spots"} left`}
                 </p>
+                {(genderAggregate.male + genderAggregate.female + genderAggregate.other) > 0 && (
+                  <p style={{ fontSize: 11, color: "#8b7b6d", marginTop: 2 }}>
+                    {genderAggregate.male} men • {genderAggregate.female} women
+                    {genderAggregate.other ? ` • ${genderAggregate.other} others` : ""}
+                  </p>
+                )}
               </div>
               <span
                 style={{
@@ -989,23 +1039,35 @@ export default function PlanDetailClient({ initialPlan }: any) {
                               {p.user?.name || "Member"}
                             </span>
                           </div>
-                          <span
-                            className="pd-settle-status"
-                            style={{
-                              color: settled ? "#166534" : "#92400e",
-                              background: settled ? "#dcfce7" : "#fef3c7",
-                            }}
-                          >
-                            {settled ? (
-                              <>
-                                <CheckCircle2 size={10} /> Settled
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle size={10} /> Pending
-                              </>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <span
+                              className="pd-settle-status"
+                              style={{
+                                color: settled ? "#166534" : "#92400e",
+                                background: settled ? "#dcfce7" : "#fef3c7",
+                              }}
+                            >
+                              {settled ? (
+                                <>
+                                  <CheckCircle2 size={10} /> Settled
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle size={10} /> Pending
+                                </>
+                              )}
+                            </span>
+                            {isHost && String(p.user_id) !== String(plan.host_id) && (
+                              <button
+                                type="button"
+                                onClick={() => removeParticipant(p.user_id)}
+                                style={{ border: "1px solid #e5d7ca", borderRadius: 999, padding: "4px 8px", fontSize: 11 }}
+                                disabled={busy === `remove-${p.user_id}`}
+                              >
+                                {busy === `remove-${p.user_id}` ? "Removing..." : "Remove"}
+                              </button>
                             )}
-                          </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -1143,6 +1205,12 @@ export default function PlanDetailClient({ initialPlan }: any) {
 
           {/* CTA */}
           <div style={{ paddingBottom: 8 }}>
+            {plan.removed_by_host_for_current_user && (
+              <div className="pd-joined-badge" style={{ background: "#fef2f2", color: "#b91c1c" }}>
+                Host removed you from this plan
+              </div>
+            )}
+
             {isParticipant && !isHost && (
               <div className="pd-joined-badge">
                 <CheckCircle2 size={12} /> You're in this plan!
@@ -1158,22 +1226,27 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 Leave plan
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={join}
-                disabled={
-                  busy === "join" ||
-                  effectiveStatus !== "open" ||
-                  (plan.female_only && plan.current_user_gender !== "female")
-                }
-                className="pd-btn-join"
-              >
-                {plan.female_only && plan.current_user_gender !== "female"
-                  ? "This plan is for women only"
-                  : busy === "join"
-                    ? "Please wait…"
-                    : statusLabel(effectiveStatus)}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={join}
+                  disabled={
+                    busy === "join" ||
+                    effectiveStatus !== "open" ||
+                    (plan.female_only && plan.current_user_gender !== "female")
+                  }
+                  className="pd-btn-join"
+                >
+                  {plan.female_only && plan.current_user_gender !== "female"
+                    ? "This plan is for women only"
+                    : busy === "join"
+                      ? "Please wait…"
+                      : statusLabel(effectiveStatus)}
+                </button>
+                <p style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: '#8a7a70' }}>
+                  Meet in public places
+                </p>
+              </>
             )}
           </div>
         </div>

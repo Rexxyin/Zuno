@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { logAudit } from '@/lib/server/safety'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -33,8 +34,12 @@ export async function GET(request: Request) {
       await supabase.from('users').upsert(fallback)
     }
 
-    const { data: profile } = await supabase.from('users').select('name,gender,age').eq('id', user.id).single()
-    const needsOnboarding = !(profile?.name && profile?.gender && profile?.age)
+    const { data: profile } = await supabase.from('users').select('name,gender,age,is_banned').eq('id', user.id).single()
+
+    await logAudit(supabase, { actorId: user.id, eventType: 'signup', entityType: 'user', entityId: user.id })
+
+    if (profile?.is_banned) return NextResponse.redirect(`${origin}/banned`)
+    const needsOnboarding = !(profile?.name && profile?.age)
     if (needsOnboarding) return NextResponse.redirect(`${origin}/onboarding`)
   }
 

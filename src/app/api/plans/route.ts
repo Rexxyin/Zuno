@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { canonicalizeCity } from '@/lib/cities'
 import { computeEffectivePlanStatus, normalizeVisibility } from '@/lib/plan'
+import { ensureNotBanned, getBlockedUserIds } from '@/lib/server/safety'
 
 export async function GET(request: Request) {
   const cookieStore = await cookies()
@@ -12,6 +13,11 @@ export async function GET(request: Request) {
   const includeMine = searchParams.get('includeMine') === '1'
 
   let scopedPlanIds: string[] = []
+
+  if (auth.user) {
+    const { banned } = await ensureNotBanned(supabase, auth.user.id)
+    if (banned) return NextResponse.json([], { status: 200 })
+  }
   if (includeMine && auth.user) {
     const { data: joinedRows } = await supabase
       .from('plan_participants')
@@ -24,7 +30,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from('plans')
-    .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status,user:users(id,name,avatar_url))')
+    .select('*, host:users!plans_host_id_fkey(*), participants:plan_participants(user_id,status,user:users(id,name,avatar_url,gender))')
     .not('city', 'is', null)
     .order('datetime', { ascending: true })
     .limit(80)
@@ -42,6 +48,8 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const blockedIds = await getBlockedUserIds(supabase, auth.user?.id || null)
+
   const normalized = (data || [])
     .map((p: any) => {
       const effectiveStatus = computeEffectivePlanStatus(p)
@@ -55,6 +63,7 @@ export async function GET(request: Request) {
       }
     })
     .filter((p: any) => p.status !== 'expired')
+    .filter((p: any) => !blockedIds.has(String(p.host_id)))
 
   if (!auth.user) {
     return NextResponse.json(normalized.map((p: any) => ({ ...p, is_favorite: false })))

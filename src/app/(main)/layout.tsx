@@ -1,5 +1,6 @@
 import { CityProvider } from '@/components/CityContext'
 import { TopNav } from '@/components/TopNav'
+import { AppFooter } from '@/components/AppFooter'
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -7,6 +8,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <main className="w-full min-h-screen app-surface">
         <TopNav />
         {children}
+        <AppFooter />
       </main>
     </CityProvider>
   )

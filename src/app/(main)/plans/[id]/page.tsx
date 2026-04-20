@@ -4,22 +4,11 @@ import { notFound } from "next/navigation";
 import PlanDetailClient from "./PlanDetailClient";
 import { createClient } from "@/lib/supabase/server";
 import { computeEffectivePlanStatus, normalizeVisibility } from "@/lib/plan";
+import { hasBlockBetween } from '@/lib/server/safety';
 
-const FALLBACK_IMAGE =
-  "https://res.cloudinary.com/dojdqt19w/image/upload/v1776621170/Adobe_Express_-_file_tjw0sa.jpg";
 const SITE_URL = "https://zunoplan.vercel.app";
 
 // ─── Helpers ────────────────────────────────────────────────────
-
-function formatShareDate(datetime: string) {
-  return new Date(datetime).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
 
 /** Build a punchy OG title: no description, just the key facts */
 function buildOgTitle(plan: {
@@ -35,23 +24,6 @@ function buildOgTitle(plan: {
   if (plan.city) parts.push(plan.city);
   parts.push(date);
   return parts.join(" · ");
-}
-
-function resolveOgImage(imageUrl?: string | null) {
-  if (!imageUrl) return FALLBACK_IMAGE;
-  try {
-    const parsed = new URL(imageUrl);
-    if (parsed.pathname.includes("/storage/v1/object/sign/")) {
-      parsed.pathname = parsed.pathname.replace(
-        "/storage/v1/object/sign/",
-        "/storage/v1/object/public/",
-      );
-      parsed.search = "";
-    }
-    return parsed.toString();
-  } catch {
-    return imageUrl || FALLBACK_IMAGE;
-  }
 }
 
 // ─── Metadata ────────────────────────────────────────────────────
@@ -83,19 +55,16 @@ export async function generateMetadata({
   const joined = (plan.participants || []).filter(
     (p: any) => p.status === "joined",
   ).length;
-  const host = Array.isArray(plan.host) ? plan.host[0] : plan.host;
-
   const ogTitle = buildOgTitle({
     title: plan.title,
     datetime: plan.datetime,
     city: (plan as any).city,
   });
 
-  const ogDescription = "Good vibes, real plan. Your spot is waiting.🌻";
+  const spotsLeft = Math.max((plan.max_people || 0) - joined, 0);
+  const ogDescription = `${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left · Good vibes, real plan.`;
 
-  // Use the plan's own image directly — no processing, no edge function
-  // Instead of signed URL, use the public URL directly:
-  const ogImage = resolveOgImage(plan.image_url);
+  const ogImage = `${SITE_URL}/api/og?planId=${encodeURIComponent(plan.id)}`;
 
   const planUrl = `${SITE_URL}/plans/${plan.id}`;
 
@@ -144,7 +113,7 @@ export default async function Page({ params }: any) {
   const { data: participants } = await supabase
     .from("plan_participants")
     .select(
-      "user_id,status,user:users!plan_participants_user_id_fkey(id,name,avatar_url)",
+      "user_id,status,removed_by_host,removed_by_host_at,removed_by_host_user_id,user:users!plan_participants_user_id_fkey(id,name,avatar_url,gender)",
     )
     .eq("plan_id", id)
     .eq("status", "joined");
@@ -152,6 +121,19 @@ export default async function Page({ params }: any) {
     .from("expense_settlements")
     .select("user_id,settled,settled_at")
     .eq("plan_id", id);
+
+  const { data: myMembership } = auth.user
+    ? await supabase
+        .from("plan_participants")
+        .select("removed_by_host,status")
+        .eq("plan_id", id)
+        .eq("user_id", auth.user.id)
+        .maybeSingle()
+    : { data: null };
+
+  if (auth.user?.id && (await hasBlockBetween(supabase, auth.user.id, plan.host_id))) {
+    return notFound();
+  }
   const isParticipant = Boolean(
     (participants || []).some((p: any) => p.user_id === auth.user?.id),
   );
@@ -192,6 +174,7 @@ export default async function Page({ params }: any) {
       is_favorite: Boolean(favorites),
       current_user_id: auth.user?.id || null,
       current_user_gender: currentUser?.gender || null,
+      removed_by_host_for_current_user: !!myMembership?.removed_by_host && myMembership?.status === "left",
     }),
   );
 
