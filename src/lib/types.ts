@@ -8,6 +8,10 @@ export interface User {
   gpay_link?: string | null
   upi_payee_name?: string | null
   phone_verified: boolean
+  phone_verified_at?: string | null
+  phone_verification_provider?: string | null
+  is_admin?: boolean
+  is_banned?: boolean
   gender?: string | null
   age?: number | null
   phone_number?: string | null
@@ -65,6 +69,9 @@ export interface PlanParticipant {
   plan_id: string
   status: ParticipantStatus
   joined_at: string
+  removed_by_host?: boolean
+  removed_by_host_at?: string | null
+  removed_by_host_user_id?: string | null
   user?: User
 }
 

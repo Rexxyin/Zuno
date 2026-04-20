@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import Link from 'next/link'
 import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
@@ -67,6 +68,12 @@ export function SignInDialog({
 
           <p className="mt-2 text-[13px] text-[#7A6A64] leading-[1.55]">
             Meet people, split costs, and go together.
+          </p>
+          <p className="mt-2 text-[11px] text-[#8a7a73] leading-[1.5]">
+            By continuing, you agree to our{' '}
+            <Link href="/terms" className="underline text-[#5A3825]">Terms</Link>{' '}
+            &{' '}
+            <Link href="/safety" className="underline text-[#5A3825]">Safety Guidelines</Link>.
           </p>
 
           <div className="mt-5" />

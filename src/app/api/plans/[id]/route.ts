@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { computeEffectivePlanStatus, normalizeVisibility } from '@/lib/plan'
+import { hasBlockBetween } from '@/lib/server/safety'
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
@@ -23,9 +24,23 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     .eq('plan_id', id)
     .eq('status', 'joined')
 
+  const { data: myMembership } = auth.user
+    ? await supabase
+        .from('plan_participants')
+        .select('removed_by_host,status')
+        .eq('plan_id', id)
+        .eq('user_id', auth.user.id)
+        .maybeSingle()
+    : { data: null }
+
   const isParticipant = (participants || []).some((p: any) => p.user_id === auth.user?.id)
   const isHost = auth.user?.id === plan.host_id
   const visibility = normalizeVisibility(plan.visibility)
+
+
+  if (auth.user?.id && await hasBlockBetween(supabase, auth.user.id, plan.host_id)) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+  }
 
   if (visibility === 'private' && !isHost && !isParticipant) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
@@ -43,6 +58,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
     require_approval: !!plan.approval_mode,
     participants: participants || [],
     current_user_id: auth.user?.id || null,
+    removed_by_host_for_current_user: !!myMembership?.removed_by_host && myMembership?.status === 'left',
   })
 }
 

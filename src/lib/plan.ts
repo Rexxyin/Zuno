@@ -47,7 +47,7 @@ export function statusLabel(status: NormalizedPlanStatus): string {
   if (status === 'closed') return 'Plan is closed'
   if (status === 'full') return 'Plan is full'
   if (status === 'expired') return 'Plan has expired'
-  return 'Join plan'
+  return 'Join responsibly'
 }
 
 export function statusBadge(status: NormalizedPlanStatus): { text: string; className: string } | null {

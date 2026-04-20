@@ -2,20 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  Camera,
-  ChevronLeft,
-  Instagram,
-  LogOut,
-  Save,
-  Sparkles,
-} from "lucide-react";
-import { TrustBadge } from "@/components/TrustBadge";
+import { Camera, ChevronLeft, Sparkles } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@/lib/types";
 import { generateAvatarSeed, getUserAvatarUrl } from "@/lib/avatar";
 import { toast } from "@/components/ui/toast";
+import Link from "next/link";
 import { generateUpiLink, normalizeUpiId } from "@/lib/upi";
 
 type EditableProfile = {
@@ -39,6 +32,11 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
 
   const [edit, setEdit] = useState<EditableProfile>({
     name: "",
@@ -108,6 +106,7 @@ export default function ProfilePage() {
     }
 
     setUser(profile);
+    setPhoneInput((profile as any).phone_number || "");
     applyProfileToForm(profile);
     setLoading(false);
   };
@@ -168,6 +167,68 @@ export default function ProfilePage() {
     setSaving(false);
   };
 
+  const sendOtp = async () => {
+    if (!phoneInput.trim()) return toast.error('Enter phone number first')
+    setSendingOtp(true)
+    const res = await fetch('/api/phone/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneInput.trim() }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to send OTP')
+    else toast.success('OTP sent')
+    setSendingOtp(false)
+  }
+
+  const verifyOtp = async () => {
+    if (!otpCode.trim()) return toast.error('Enter OTP code')
+    setVerifyingOtp(true)
+    const res = await fetch('/api/phone/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phoneInput.trim(), token: otpCode.trim() }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to verify OTP')
+    else {
+      toast.success('Phone verified')
+      setUser((prev) => (prev ? ({ ...prev, phone_verified: true, phone_number: phoneInput.trim() } as User) : prev))
+      setOtpCode('')
+    }
+    setVerifyingOtp(false)
+  }
+
+  const handleBlockToggle = async () => {
+    if (!user || !authUserId || isOwnProfile) return
+    const shouldBlock = confirm("Block this user? You will no longer see each other's plans or interactions.")
+    if (!shouldBlock) return
+    setBlockBusy(true)
+    const res = await fetch('/api/blocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedId: user.id }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to block user')
+    else toast.success('User blocked')
+    setBlockBusy(false)
+  }
+
+  const reportUser = async () => {
+    if (!user || isOwnProfile) return
+    const reason = prompt('Report reason: fake_profile | harassment | unsafe_plan | spam | other', 'fake_profile') || 'other'
+    const details = prompt('Add details (optional)', '') || ''
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'profile', targetUserId: user.id, reason, details }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) toast.error(data.error || 'Unable to submit report')
+    else toast.success(data.message || "Thanks, we'll review this.")
+  }
+
   const handleSignOut = async () => {
     setSigningOut(true);
     await supabase.auth.signOut();
@@ -220,8 +281,12 @@ export default function ProfilePage() {
           <p className="text-[18px] font-medium text-[#2b2b2b]">{user.name}</p>
 
           {user.phone_verified && (
-            <p className="text-xs text-emerald-600 mt-1">Verified profile</p>
+            <p className="text-xs text-emerald-600 mt-1">✅ Phone verified</p>
           )}
+          {!user.avatar_url && (
+            <p className="text-xs text-amber-700 mt-1">Profiles with photos are more trusted</p>
+          )}
+          <p className="text-xs mt-1 text-[#7a6a64]">{user.name && user.age ? "🟢 Complete profile" : "🟡 Incomplete profile"}</p>
         </div>
 
         {/* STATS */}
@@ -280,6 +345,31 @@ export default function ProfilePage() {
               className="w-full bg-[#f6f2ec] rounded-xl px-3 py-2 text-sm text-gray-400"
             />
 
+            <div className="rounded-xl bg-[#f6f2ec] p-3 space-y-2">
+              <p className="text-xs text-[#6f6258]">Phone verification helps build trust with others.</p>
+              <input
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="Phone (+91...)"
+                className="w-full bg-white rounded-lg px-3 py-2 text-sm"
+              />
+              {!user.phone_verified && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={sendOtp} className="rounded-lg bg-[#5A3825] text-white py-2 text-xs">{sendingOtp ? 'Sending...' : 'Send OTP'}</button>
+                  <input
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="Enter OTP"
+                    className="rounded-lg bg-white px-2 py-2 text-xs"
+                  />
+                </div>
+              )}
+              {!user.phone_verified && (
+                <button onClick={verifyOtp} className="w-full rounded-lg border border-[#d7c6b5] py-2 text-xs">{verifyingOtp ? 'Verifying...' : 'Verify phone'}</button>
+              )}
+              {user.phone_verified && <p className="text-xs text-emerald-700">✅ Phone verified badge active</p>}
+            </div>
+
             <input
               value={edit.gpayLink}
               placeholder="UPI ID"
@@ -316,6 +406,13 @@ export default function ProfilePage() {
         )}
 
         {/* EXTERNAL ACTIONS */}
+        {!isOwnProfile && (
+          <div className="rounded-2xl bg-white p-4 border border-black/5 space-y-2">
+            <button onClick={handleBlockToggle} className="w-full rounded-xl border border-[#dbcab7] py-2 text-sm">{blockBusy ? 'Please wait...' : 'Block user'}</button>
+            <button onClick={reportUser} className="w-full rounded-xl border border-[#dbcab7] py-2 text-sm">Report user</button>
+          </div>
+        )}
+
         {!isOwnProfile && (user.instagram_url || user.gpay_link) && (
           <div className="flex gap-2">
             {user.instagram_url && (
@@ -343,6 +440,7 @@ export default function ProfilePage() {
         )}
       </div>
 
+      <p className="px-6 pb-3 text-center text-[11px] text-[#8a7a70]">Impersonating others or using misleading identity is prohibited. <Link className="underline" href="/terms">Terms</Link></p>
       <BottomNav />
     </div>
   );
