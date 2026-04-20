@@ -27,8 +27,8 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
   const isHost = auth.user?.id === plan.host_id
   const visibility = normalizeVisibility(plan.visibility)
 
-  if (visibility === 'invite_only' && !(isHost || isParticipant)) {
-    return NextResponse.json({ error: 'This invite-only plan is only visible with direct access.' }, { status: 403 })
+  if (visibility === 'private' && !isHost && !isParticipant) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
   }
 
   const effectiveStatus = computeEffectivePlanStatus({ ...plan, participants })

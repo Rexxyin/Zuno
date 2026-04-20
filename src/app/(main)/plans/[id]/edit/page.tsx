@@ -237,24 +237,21 @@ export default function EditPlanPage() {
               Total
             </button>
           </div>
-          <div className="rounded-xl bg-[#F7F1E8] px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-start gap-1">
-                <Info className="mt-0.5 h-3.5 w-3.5 text-[#7A6A64]" />
-                <div>
-                  <p className="text-xs font-medium text-[#3A2E2A]">Include host in spots & split</p>
-                  <p className="text-[11px] text-[#7A6A64]">If off, host is excluded from both calculations.</p>
-                </div>
+          <label className="flex items-start justify-between rounded-xl bg-[#F7F1E8] px-3 py-2.5">
+            <div className="flex items-start gap-1">
+              <Info className="mt-0.5 h-3.5 w-3.5 text-[#7A6A64]" />
+              <div>
+                <p className="text-xs font-medium text-[#3A2E2A]">Include host in spots & split</p>
+                <p className="text-[11px] text-[#7A6A64]">If checked, max people includes host too.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => update("host_included_in_spots_and_splits", !form.host_included_in_spots_and_splits)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${form.host_included_in_spots_and_splits ? "bg-[#5A3825]" : "bg-[#d5c9ba]"}`}
-              >
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${form.host_included_in_spots_and_splits ? "translate-x-5" : "translate-x-0.5"}`} />
-              </button>
             </div>
-          </div>
+            <input
+              type="checkbox"
+              checked={!!form.host_included_in_spots_and_splits}
+              onChange={(e) => update("host_included_in_spots_and_splits", e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-[#cbb9a6] text-[#5A3825] focus:ring-[#5A3825]"
+            />
+          </label>
           <input
             type="number"
             value={form.cost_amount || ""}

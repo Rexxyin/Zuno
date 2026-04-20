@@ -12,7 +12,7 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
 
   const { data: plan } = await supabase
     .from('plans')
-    .select('id, approval_mode, female_only, host_id, status, datetime, visibility, max_people, participants:plan_participants(status)')
+    .select('id, approval_mode, female_only, host_id, status, datetime, visibility, max_people, host_included_in_spots_and_splits, participants:plan_participants(status)')
     .eq('id', id)
     .single()
 
@@ -30,7 +30,10 @@ export async function POST(_: Request, context: { params: Promise<{ id: string }
   }
 
   const visibility = normalizeVisibility(plan.visibility)
-  const status = visibility === 'public' && plan.approval_mode ? 'pending' : 'joined'
+  if (visibility === 'private') {
+    return NextResponse.json({ error: 'This plan is private.' }, { status: 403 })
+  }
+  const status = plan.approval_mode ? 'pending' : 'joined'
   const { error } = await supabase.from('plan_participants').upsert({ user_id: auth.user.id, plan_id: id, status }, { onConflict: 'user_id,plan_id' })
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 

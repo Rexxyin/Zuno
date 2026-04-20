@@ -9,6 +9,8 @@ import { parseDatetimeLocal, formatDate, formatTime } from "@/lib/datetime";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   computeEffectivePlanStatus,
+  getJoinedParticipantsCount,
+  getParticipantCapacity,
   normalizeVisibility,
   statusBadge,
 } from "@/lib/plan";
@@ -42,9 +44,9 @@ export function PlanCard({
   const joinedParticipants = (plan.participants || []).filter(
     (p: any) => p.status === "joined",
   );
-  const joinedCount = joinedParticipants.length;
-  const maxPeople = Number(plan.max_people || 0);
-  const spotsLeft = Math.max(maxPeople - joinedCount, 0);
+  const joinedCount = getJoinedParticipantsCount(plan.participants);
+  const participantCapacity = getParticipantCapacity(plan);
+  const spotsLeft = Math.max(participantCapacity - joinedCount, 0);
   const effectiveStatus = computeEffectivePlanStatus(plan as any);
   const badge = statusBadge(effectiveStatus);
   const visibility = normalizeVisibility(plan.visibility);
@@ -98,9 +100,9 @@ export function PlanCard({
             {CATEGORY_META[plan.category as keyof typeof CATEGORY_META]
               ?.label || "Plan"}
           </div>
-          {visibility === "invite_only" && (
+          {(visibility === "invite_only" || visibility === "private") && (
             <div className="absolute left-3 bottom-3 rounded-full bg-[#1a1410] px-2.5 py-1 text-[10px] text-white">
-              Invite only
+              {visibility === "private" ? "Private" : "Invite only"}
             </div>
           )}
           {plan.female_only && (
