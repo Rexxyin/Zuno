@@ -2,8 +2,10 @@ import type { Plan } from './types'
 
 export type NormalizedPlanStatus = 'open' | 'closed' | 'full' | 'expired'
 
-export function normalizeVisibility(raw?: string | null): 'public' | 'invite_only' {
-  return raw === 'private' || raw === 'invite_only' ? 'invite_only' : 'public'
+export function normalizeVisibility(raw?: string | null): 'public' | 'invite_only' | 'private' {
+  if (raw === 'private') return 'private'
+  if (raw === 'invite_only') return 'invite_only'
+  return 'public'
 }
 
 export function normalizePlanStatus(raw?: string | null): NormalizedPlanStatus {
@@ -13,14 +15,28 @@ export function normalizePlanStatus(raw?: string | null): NormalizedPlanStatus {
   return 'open'
 }
 
+export function getJoinedParticipantsCount(participants?: any[]): number {
+  return (participants || []).filter((p: any) => p?.status === 'joined').length
+}
+
+export function isHostIncludedInSpots(plan: Partial<Plan>): boolean {
+  return plan.host_included_in_spots_and_splits !== false
+}
+
+export function getParticipantCapacity(plan: Partial<Plan>): number {
+  const maxPeople = Number(plan.max_people || 0)
+  if (maxPeople <= 0) return 0
+  return Math.max(isHostIncludedInSpots(plan) ? maxPeople - 1 : maxPeople, 0)
+}
+
 export function computeEffectivePlanStatus(plan: Partial<Plan> & { datetime?: string | null; max_people?: number | null; participants?: any[]; status?: string | null }): NormalizedPlanStatus {
   const normalized = normalizePlanStatus(plan.status)
   const isPast = plan.datetime ? +new Date(plan.datetime) < Date.now() : false
   if (isPast) return 'expired'
 
-  const joinedCount = (plan.participants || []).filter((p: any) => p?.status === 'joined').length
-  const maxPeople = Number(plan.max_people || 0)
-  if (maxPeople > 0 && joinedCount >= maxPeople) return 'full'
+  const joinedCount = getJoinedParticipantsCount(plan.participants)
+  const participantCapacity = getParticipantCapacity(plan)
+  if (participantCapacity > 0 && joinedCount >= participantCapacity) return 'full'
   if (normalized === 'closed') return 'closed'
   if (normalized === 'expired') return 'expired'
   if (normalized === 'full') return 'full'

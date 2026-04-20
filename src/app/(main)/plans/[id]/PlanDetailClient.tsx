@@ -31,6 +31,9 @@ import { CATEGORY_META } from "@/lib/categories";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import {
   computeEffectivePlanStatus,
+  getJoinedParticipantsCount,
+  getParticipantCapacity,
+  isHostIncludedInSpots,
   statusBadge,
   statusLabel,
 } from "@/lib/plan";
@@ -60,10 +63,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
   const joinedParticipants = (plan.participants || []).filter(
     (p: any) => p.status === "joined",
   );
-  const joinedCount = joinedParticipants.length;
-  const maxSpots = Number(plan.max_people || 0);
-  const hostIncluded = plan.host_included_in_spots_and_splits !== false;
-  const participantCapacity = Math.max(hostIncluded ? maxSpots - 1 : maxSpots, 0);
+  const joinedCount = getJoinedParticipantsCount(plan.participants);
+  const hostIncluded = isHostIncludedInSpots(plan);
+  const participantCapacity = getParticipantCapacity(plan);
+  const totalFilledCount = hostIncluded ? joinedCount + 1 : joinedCount;
+  const totalCapacity = Number(plan.max_people || 0);
   const spotsOpen = Math.max(participantCapacity - joinedCount, 0);
   const effectiveStatus = computeEffectivePlanStatus(plan);
   const badge = statusBadge(effectiveStatus);
@@ -72,7 +76,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
     [plan.datetime],
   );
   const fillPercent =
-    participantCapacity > 0 ? Math.round((joinedCount / participantCapacity) * 100) : 0;
+    totalCapacity > 0 ? Math.round((totalFilledCount / totalCapacity) * 100) : 0;
 
   // Use final_amount if available, else estimate
   const activeAmount = plan.final_amount
@@ -825,7 +829,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 <Users size={14} color="#c2602a" />
               </div>
               <p className="pd-info-lbl">Group size</p>
-              <p className="pd-info-val">{joinedCount} joined</p>
+              <p className="pd-info-val">{totalFilledCount} / {totalCapacity} joined</p>
               <p className="pd-info-sub">{spotsOpen} spots open</p>
               <p className="pd-info-sub">Host {hostIncluded ? "included" : "excluded"} in spots & split</p>
             </div>
@@ -860,7 +864,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             >
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#1a1410" }}>
-                  {joinedCount} / {participantCapacity} participant spots filled
+                  {totalFilledCount} / {totalCapacity} total spots filled
                 </p>
                 <p style={{ fontSize: 11, color: "#8b7b6d", marginTop: 1 }}>
                   {spotsOpen === 0

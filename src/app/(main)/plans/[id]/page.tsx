@@ -37,6 +37,23 @@ function buildOgTitle(plan: {
   return parts.join(" · ");
 }
 
+function resolveOgImage(imageUrl?: string | null) {
+  if (!imageUrl) return FALLBACK_IMAGE;
+  try {
+    const parsed = new URL(imageUrl);
+    if (parsed.pathname.includes("/storage/v1/object/sign/")) {
+      parsed.pathname = parsed.pathname.replace(
+        "/storage/v1/object/sign/",
+        "/storage/v1/object/public/",
+      );
+      parsed.search = "";
+    }
+    return parsed.toString();
+  } catch {
+    return imageUrl || FALLBACK_IMAGE;
+  }
+}
+
 // ─── Metadata ────────────────────────────────────────────────────
 
 export async function generateMetadata({
@@ -78,9 +95,7 @@ export async function generateMetadata({
 
   // Use the plan's own image directly — no processing, no edge function
   // Instead of signed URL, use the public URL directly:
-  const ogImage = plan.image_url
-    ? plan.image_url.replace("/sign/", "/public/") // strip token
-    : FALLBACK_IMAGE;
+  const ogImage = resolveOgImage(plan.image_url);
 
   const planUrl = `${SITE_URL}/plans/${plan.id}`;
 
@@ -144,8 +159,8 @@ export default async function Page({ params }: any) {
   const effectiveStatus = computeEffectivePlanStatus({ ...plan, participants });
   const visibility = normalizeVisibility(plan.visibility);
 
-  if (visibility === "invite_only" && !(isParticipant || isHost))
-    return notFound();
+  if (visibility === "private" && !(isParticipant || isHost)) return notFound();
+  // Invite-only plans are hidden from public feed, but accessible via direct link.
   if (effectiveStatus === "expired" && !(isParticipant || isHost))
     return notFound();
 
