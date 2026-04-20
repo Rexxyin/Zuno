@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Toaster } from '@/components/ui/toast'
 import { Poppins } from 'next/font/google'
-
+import Preloader from '@/components/Preloader'
 const inter = Poppins({ weight:"400"})
 
 export const metadata: Metadata = {
@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
       </head>
       <body className={`${inter.className}`}>
+        <Preloader/>
         <main className="min-h-screen">{children}</main>
         <Toaster />
       </body>

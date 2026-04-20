@@ -75,4 +75,21 @@ body {
   @keyframes shimmer {
     to { background-position-x: -200%; }
   }
+
+  @keyframes finalReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes zunoZoom {
+  0% { transform: scale(1.05); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1.05); }
+}
 }
