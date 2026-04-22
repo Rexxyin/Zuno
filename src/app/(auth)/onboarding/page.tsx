@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toast";
+// import {
+//   RecaptchaVerifier,
+//   signInWithPhoneNumber,
+//   ConfirmationResult,
+// } from "firebase/auth";
+// import { firebaseAuth } from "@/lib/firebase";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -20,6 +26,9 @@ export default function OnboardingPage() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
+  // const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(
+  //   null,
+  // );
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -66,39 +75,74 @@ export default function OnboardingPage() {
     });
   }, [router, supabase]);
 
-  const sendOtp = async () => {
-    if (!phone.trim())
-      return toast.error("Phone number is required for onboarding");
-    setSendingOtp(true);
-    const res = await fetch("/api/phone/send-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: phone.trim() }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) toast.error(data.error || "Unable to send OTP");
-    else toast.success("OTP sent");
-    setSendingOtp(false);
-  };
+  // const setupRecaptcha = () => {
+  //   if (!(window as any).recaptchaVerifier) {
+  //     (window as any).recaptchaVerifier = new RecaptchaVerifier(
+  //       firebaseAuth,
+  //       "recaptcha-container",
+  //       { size: "invisible" },
+  //     );
+  //   }
+  // };
 
-  const verifyOtp = async () => {
-    if (!phone.trim()) return toast.error("Phone number is required");
-    if (!otpCode.trim()) return toast.error("Enter OTP code");
-    setVerifyingOtp(true);
-    const res = await fetch("/api/phone/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: phone.trim(), token: otpCode.trim() }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) toast.error(data.error || "Unable to verify OTP");
-    else {
-      toast.success("Phone verified");
-      setPhoneVerified(true);
-      setOtpCode("");
-    }
-    setVerifyingOtp(false);
-  };
+  // const sendOtp = async () => {
+  //   if (!phone.trim()) return toast.error("Phone required");
+
+  //   try {
+  //     setSendingOtp(true);
+  //     setupRecaptcha();
+
+  //     const appVerifier = (window as any).recaptchaVerifier;
+
+  //     const result = await signInWithPhoneNumber(
+  //       firebaseAuth,
+  //       phone.trim(),
+  //       appVerifier,
+  //     );
+
+  //     setConfirmation(result);
+  //     toast.success("OTP sent");
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     toast.error(err.message || "Failed to send OTP");
+  //   } finally {
+  //     setSendingOtp(false);
+  //   }
+  // };
+
+  // const verifyOtp = async () => {
+  //   if (!confirmation) return toast.error("Send OTP first");
+  //   if (!otpCode.trim()) return toast.error("Enter OTP");
+
+  //   try {
+  //     setVerifyingOtp(true);
+
+  //     await confirmation.confirm(otpCode.trim());
+
+  //     // 🔥 IMPORTANT: call backend to save
+  //     const res = await fetch("/api/phone/fire-verify", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ phone: phone.trim() }),
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (!res.ok) throw new Error(data.error);
+
+  //     setPhoneVerified(true);
+  //     setOtpCode("");
+
+  //     toast.success("Phone verified");
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     toast.error(err.message || "Invalid OTP");
+  //   } finally {
+  //     setVerifyingOtp(false);
+  //   }
+  // };
 
   const submit = async () => {
     const { data } = await supabase.auth.getUser();
@@ -173,13 +217,14 @@ export default function OnboardingPage() {
       className="min-h-screen flex items-center justify-center px-4 py-10"
       style={{ fontFamily: "DM Sans, Inter, sans-serif" }}
     >
+      <div id="recaptcha-container"></div>
       <div className="w-full max-w-[380px] rounded-[26px] bg-[#F4EFEA] shadow-[0_18px_40px_rgba(0,0,0,0.15)] overflow-hidden">
         <div className="px-5 pt-6 pb-4">
           <h1 className="text-[20px] font-semibold text-[#3A2E2A] leading-tight tracking-[-0.01em]">
             Before you continue
           </h1>
           <p className="mt-1.5 text-[13px] text-[#7A6A64] leading-[1.5]">
-            Complete onboarding with phone verification to keep Zuno safer.
+            Just a few details and you’re in.
           </p>
         </div>
 
@@ -209,8 +254,9 @@ export default function OnboardingPage() {
             type="number"
             className="w-full rounded-xl bg-[#EFE7DA] px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[#9C8F88]"
           />
-
-          {/* <div className="rounded-xl bg-[#EFE7DA] p-3 space-y-2">
+          {/* 
+At this moment avoiding phone verification
+         <div className="rounded-xl bg-[#EFE7DA] p-3 space-y-2">
             <input
               value={phone}
               onChange={(e) => {
@@ -246,12 +292,12 @@ export default function OnboardingPage() {
             ) : (
               <p className="text-xs text-emerald-700">✅ Phone verified</p>
             )}
-          </div> */}
+          </div>  */}
 
           <input
             value={instagram}
             onChange={(e) => setInstagram(e.target.value)}
-            placeholder="Instagram profile (optional)"
+            placeholder="Instagram profile"
             className="w-full rounded-xl bg-[#EFE7DA] px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[#9C8F88]"
           />
 
@@ -268,7 +314,11 @@ export default function OnboardingPage() {
                 <Link href="/terms" className="underline">
                   Terms
                 </Link>{" "}
-                &  <Link href="/safety" className="underline">Safety</Link> Guidelines
+                &{" "}
+                <Link href="/safety" className="underline">
+                  Safety
+                </Link>{" "}
+                Guidelines
               </span>
             </label>
           </div>

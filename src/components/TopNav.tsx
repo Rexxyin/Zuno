@@ -62,11 +62,15 @@ export function TopNav() {
       <div className="mx-auto max-w-md px-4 py-3">
         <div className="flex items-center justify-between">
           {/* LEFT: BRAND */}
-          <div className="flex flex-col leading-tight">
-            <p className="text-[10px] tracking-[0.25em] text-[#8b7b6d]">ZUNO</p>
-            <p className="text-[15px] font-medium text-[#2b2b2b]">City plans</p>
-          </div>
+          <div className="flex flex-col leading-none">
+            <div className="flex items-center gap-2">
+                    <div className="text-xl font-semibold tracking-tight text-[#D46A4A]">Zuno</div>
+            </div>
 
+            <p className="mt-1 text-[12px] text-[#6b6257]">
+              Real plans. Real people.
+            </p>
+          </div>
           {/* RIGHT */}
           <div className="flex items-center gap-2">
             {/* CITY SELECT */}
