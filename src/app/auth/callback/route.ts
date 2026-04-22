@@ -52,9 +52,14 @@ export async function GET(request: Request) {
 
     const { data: profile } = await supabase
       .from("users")
-      .select("name,gender,age,is_banned,phone_verified")
+      .select("name,gender,age,is_banned")
       .eq("id", user.id)
       .single();
+    const { data: consent } = await supabase
+      .from("user_safety_consents")
+      .select("is_adult,agreed_terms,acknowledged_safety_responsibility")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     await logAudit(supabase, {
       actorId: user.id,
@@ -68,7 +73,9 @@ export async function GET(request: Request) {
       profile?.name &&
       profile?.gender &&
       profile?.age &&
-      profile?.phone_verified
+      consent?.is_adult &&
+      consent?.agreed_terms &&
+      consent?.acknowledged_safety_responsibility
     );
     if (needsOnboarding) return NextResponse.redirect(`${origin}/onboarding`);
   }

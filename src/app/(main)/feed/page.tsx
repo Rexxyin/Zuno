@@ -173,12 +173,22 @@ export default function FeedPage() {
               No plans around you yet.
             </p>
 
-            <Link
-              href="/plans/create"
-              className="mt-4 inline-flex rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2.5 text-[13px] font-semibold text-white"
-            >
-              Create your first plan
-            </Link>
+            {isAuthed ? (
+              <Link
+                href="/plans/create"
+                className="mt-4 inline-flex rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2.5 text-[13px] font-semibold text-white"
+              >
+                Create your first plan
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAuthDialog(true)}
+                className="mt-4 inline-flex rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-5 py-2.5 text-[13px] font-semibold text-white"
+              >
+                Create your first plan
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -220,7 +230,12 @@ export default function FeedPage() {
 function SearchParamHandler({ onSignin }: { onSignin: () => void }) {
   const searchParams = useSearchParams();
   useEffect(() => {
-    if (searchParams.get("auth") === "required") onSignin();
+    if (
+      searchParams.get("auth") === "required" ||
+      searchParams.get("signin") === "1"
+    ) {
+      onSignin();
+    }
   }, [searchParams, onSignin]);
   return null;
 }

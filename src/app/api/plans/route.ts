@@ -127,6 +127,19 @@ export async function POST(request: Request) {
       : "public";
   const requireApproval =
     visibility === "public" ? !!body.requireApproval : false;
+  const { data: hostProfile } = await supabase
+    .from("users")
+    .select("gender")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  if (body.female_only && (hostProfile?.gender || "").toLowerCase() !== "female") {
+    return NextResponse.json(
+      { error: "Women-only plans can only be hosted by women." },
+      { status: 400 },
+    );
+  }
+
   const payload = {
     host_id: auth.user.id,
     title: body.title,
@@ -136,7 +149,7 @@ export async function POST(request: Request) {
     city,
     datetime: body.datetime,
     max_people: Math.max(Number(body.max_people ?? 0), 0),
-    whatsapp_link: body.whatsapp_link || "",
+    whatsapp_link: (body.whatsapp_link || "").trim(),
     approval_mode: requireApproval,
     female_only: !!body.female_only,
     image_url: body.image_url || null,

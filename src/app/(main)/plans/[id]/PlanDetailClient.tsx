@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { BottomNav } from "@/components/BottomNav";
+import { SignInDialog } from "@/components/auth/SignInDialog";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { ActionDialog } from "@/components/ui/ActionDialog";
 import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
@@ -92,6 +93,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
   const [reportReason, setReportReason] = useState("unsafe_plan");
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [hasReportedPlan, setHasReportedPlan] = useState(false);
   const [showRemoveDialogFor, setShowRemoveDialogFor] = useState<string | null>(
     null,
@@ -109,6 +111,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
   ];
 
   const isHost = plan.current_user_id === plan.host_id;
+  const currentUserGender = String(plan.current_user_gender || "").toLowerCase();
   const isParticipant = (plan.participants || []).some(
     (p: any) => p.user_id === plan.current_user_id,
   );
@@ -257,6 +260,10 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const join = async () => {
+    if (!plan.current_user_id) {
+      setShowSignInDialog(true);
+      return;
+    }
     setBusy("join");
     const res = await fetch(`/api/plans/${plan.id}/join`, { method: "POST" });
     const data = await res.json().catch(() => ({}));
@@ -1265,104 +1272,61 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 style={{ width: `${fillPercent}%` }}
               />
             </div>
-            {joinedParticipants.length > 0 && (
-              <div className="pd-avatars">
-                {joinedParticipants.slice(0, 6).map((p: any) => (
-                  <img
-                    key={p.user_id}
-                    src={
-                      p.user?.avatar_url ||
-                      `https://api.dicebear.com/7.x/initials/svg?seed=${p.user?.name || "U"}`
-                    }
-                    className="pd-av"
-                    alt={p.user?.name || "Member"}
-                  />
-                ))}
-                {joinedParticipants.length > 6 && (
-                  <span className="pd-av-more">
-                    +{joinedParticipants.length - 6}
-                  </span>
-                )}
-                <span className="pd-av-names">
-                  {joinedParticipants
-                    .slice(0, 2)
-                    .map((p: any) => p.user?.name?.split(" ")[0])
-                    .join(", ")}
-                  {joinedParticipants.length > 2
-                    ? ` & ${joinedParticipants.length - 2} more`
-                    : ""}
-                </span>
-              </div>
-            )}
             {(isHost || isParticipant) && joinedParticipants.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {joinedParticipants.map((p: any) => (
-                  <Link
-                    key={`joined-${p.user_id}`}
-                    href={`/profile/${p.user_id}`}
-                    className="pd-profile-btn"
-                  >
-                    <ExternalLink size={10} /> {p.user?.name || "Member"}
-                  </Link>
-                ))}
-              </div>
-            )}
-            {isHost && joinedParticipants.length > 0 && (
-              <div
-                style={{
-                  marginTop: 12,
-                  borderTop: "1px solid #f3ede6",
-                  paddingTop: 10,
-                  display: "grid",
-                  gap: 8,
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "#a08b7a",
-                  }}
-                >
-                  Manage participants
-                </p>
+              <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
                 {joinedParticipants.map((p: any) => (
                   <div
-                    key={`manage-${p.user_id}`}
+                    key={`joined-${p.user_id}`}
                     style={{
-                      display: "flex",
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
                       alignItems: "center",
-                      justifyContent: "space-between",
                       gap: 8,
+                      border: "1px solid #efe5d9",
+                      borderRadius: 12,
+                      padding: "8px 10px",
                     }}
                   >
-                    <Link
-                      href={`/profile/${p.user_id}`}
-                      className="pd-profile-btn"
-                      style={{ padding: "4px 10px" }}
-                    >
-                      <ExternalLink size={10} />
-                      {p.user?.name || "Member"}
-                    </Link>
-                    {String(p.user_id) !== String(plan.host_id) && (
-                      <button
-                        type="button"
-                        onClick={() => setShowRemoveDialogFor(p.user_id)}
-                        style={{
-                          border: "1px solid #e5d7ca",
-                          borderRadius: 999,
-                          padding: "4px 8px",
-                          fontSize: 11,
-                          cursor: "pointer",
-                          background: "none",
-                        }}
-                        disabled={busy === `remove-${p.user_id}`}
-                      >
-                        {busy === `remove-${p.user_id}` ? "Removing…" : "Remove"}
-                      </button>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <img
+                        src={
+                          p.user?.avatar_url ||
+                          `https://api.dicebear.com/7.x/initials/svg?seed=${p.user?.name || "U"}`
+                        }
+                        className="pd-av"
+                        alt={p.user?.name || "Member"}
+                      />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1410" }}>
+                        {p.user?.name || "Member"}
+                      </span>
+                      {String(p.user_id) === String(plan.host_id) && (
+                        <span className="pd-joined-badge" style={{ marginTop: 0 }}>
+                          Host
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Link href={`/profile/${p.user_id}`} className="pd-profile-btn">
+                        <ExternalLink size={10} /> View profile
+                      </Link>
+                      {isHost && String(p.user_id) !== String(plan.host_id) && (
+                        <button
+                          type="button"
+                          onClick={() => setShowRemoveDialogFor(p.user_id)}
+                          style={{
+                            border: "1px solid #e5d7ca",
+                            borderRadius: 999,
+                            padding: "4px 8px",
+                            fontSize: 11,
+                            cursor: "pointer",
+                            background: "none",
+                          }}
+                          disabled={busy === `remove-${p.user_id}`}
+                        >
+                          {busy === `remove-${p.user_id}` ? "Removing…" : "Remove"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1498,9 +1462,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
           )}
 
           {/* ── WhatsApp group ── */}
-          {(isHost || isParticipant) && plan.whatsapp_link && (
+          {(isHost || isParticipant) &&
+            typeof plan.whatsapp_link === "string" &&
+            plan.whatsapp_link.trim().length > 0 && (
             <a
-              href={plan.whatsapp_link}
+              href={plan.whatsapp_link.trim()}
               target="_blank"
               rel="noreferrer"
               className="pd-wa"
@@ -1679,11 +1645,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
                     busy === "join" ||
                     spotsOpen === 0 ||
                     effectiveStatus !== "open" ||
-                    (plan.female_only && plan.current_user_gender !== "female")
+                    (plan.female_only && currentUserGender !== "female")
                   }
                   className="pd-btn-join"
                 >
-                  {plan.female_only && plan.current_user_gender !== "female"
+                  {plan.female_only && currentUserGender !== "female"
                     ? "This plan is for women only"
                     : spotsOpen === 0
                       ? "Plan is full"
@@ -1944,6 +1910,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
           </div>
         )}
 
+        <SignInDialog
+          open={showSignInDialog}
+          onOpenChange={setShowSignInDialog}
+          nextPath={`/plans/${plan.id}`}
+        />
         <BottomNav />
       </div>
     </>

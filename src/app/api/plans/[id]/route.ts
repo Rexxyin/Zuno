@@ -74,6 +74,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (existing.host_id !== auth.user.id) return NextResponse.json({ error: 'Only host can edit this plan' }, { status: 403 })
 
   const body = await request.json()
+  const { data: hostProfile } = await supabase.from('users').select('gender').eq('id', auth.user.id).maybeSingle()
+  if (body.female_only === true && (hostProfile?.gender || '').toLowerCase() !== 'female') {
+    return NextResponse.json({ error: 'Women-only plans can only be hosted by women.' }, { status: 400 })
+  }
   const mapPlanStatus = (status: unknown): 'active' | 'full' | 'completed' | 'cancelled' | undefined => {
     if (typeof status !== 'string') return undefined
     if (status === 'open' || status === 'active') return 'active'
@@ -95,7 +99,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     visibility,
     host_mode: body.requireApproval ? 'host_managed' : 'open',
     approval_mode: body.requireApproval,
-    whatsapp_link: body.whatsapp_link,
+    whatsapp_link: typeof body.whatsapp_link === 'string' ? body.whatsapp_link.trim() : body.whatsapp_link,
     image_url: body.image_url,
     google_maps_link: body.google_maps_link,
     female_only: body.female_only,

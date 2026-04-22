@@ -19,6 +19,7 @@ import type { PlanCategory } from "@/lib/types";
 import { DEFAULT_LAUNCH_CITY, INDIA_HIGH_POTENTIAL_CITIES } from "@/lib/cities";
 import { useCity } from "@/components/CityContext";
 import { RichTextEditor, RichTextDisplay } from "@/components/RichTextEditor";
+import { createClient } from "@/lib/supabase/client";
 
 const steps = ["Details", "Meetup", "Settings", "Review"];
 
@@ -33,6 +34,7 @@ export default function CreatePlanPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [currentUserGender, setCurrentUserGender] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -59,6 +61,21 @@ export default function CreatePlanPage() {
       city: selectedCity || DEFAULT_LAUNCH_CITY,
     }));
   }, [selectedCity]);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const supabase = createClient();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data: me } = await supabase
+        .from("users")
+        .select("gender")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+      setCurrentUserGender(String(me?.gender || "").toLowerCase());
+    };
+    loadCurrentUser();
+  }, []);
 
   const handleChange = (e: any) => {
     const { name, value, type, checked } = e.target;
@@ -95,6 +112,11 @@ export default function CreatePlanPage() {
       if (new Date(formData.datetime).getTime() < Date.now()) {
         toast.error("Please choose a future date & time");
         setCurrentStep(1);
+        return;
+      }
+      if (formData.female_only && currentUserGender !== "female") {
+        toast.error("Women-only plans can only be hosted by women");
+        setCurrentStep(2);
         return;
       }
       setLoading(true);

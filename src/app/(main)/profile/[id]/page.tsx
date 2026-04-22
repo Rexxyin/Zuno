@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [showAvatarActions, setShowAvatarActions] = useState(false);
+  const [hostedCount, setHostedCount] = useState(0);
 
   const [edit, setEdit] = useState<EditableProfile>({
     name: "",
@@ -102,6 +103,12 @@ export default function ProfilePage() {
       setLoading(false);
       return;
     }
+
+    const { count: hostedPlansCount } = await supabase
+      .from("plans")
+      .select("id", { count: "exact", head: true })
+      .eq("host_id", targetId);
+    setHostedCount(hostedPlansCount || 0);
 
     let profile = data as User;
     if (!profile.avatar_seed) {
@@ -376,7 +383,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Reliable", value: `${user.reliability_score}%` },
-            { label: "Joined", value: user.total_joined },
+            { label: "Joined", value: (user.total_joined || 0) + hostedCount },
             { label: "Completed", value: user.total_attended },
           ].map((item) => (
             <div

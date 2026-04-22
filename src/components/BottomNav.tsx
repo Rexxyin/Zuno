@@ -5,6 +5,7 @@ import { Flame, Plus, Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { SignInDialog } from "@/components/auth/SignInDialog";
 
 export function BottomNav({
   pendingRequestsCount,
@@ -14,6 +15,15 @@ export function BottomNav({
   const pathname = usePathname();
   const is = (p: string) => pathname.startsWith(p);
   const [autoPendingCount, setAutoPendingCount] = useState(0);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => setIsAuthed(!!data.user))
+      .catch(() => setIsAuthed(false));
+  }, []);
 
   useEffect(() => {
     if (typeof pendingRequestsCount === "number") return;
@@ -101,15 +111,27 @@ export function BottomNav({
 
           {/* CENTER CTA */}
           <div className="absolute left-1/2 -translate-x-1/2 -top-6">
-            <Link
-              href="/plans/create"
+            <button
+              type="button"
+              onClick={() => {
+                if (!isAuthed) {
+                  setShowAuthDialog(true);
+                  return;
+                }
+                window.location.href = "/plans/create";
+              }}
               className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-white shadow-[0_8px_20px_rgba(212,82,42,0.4)] active:scale-[0.96]"
             >
               <Plus className="h-6 w-6" strokeWidth={2.5} />
-            </Link>
+            </button>
           </div>
         </div>
       </div>
+      <SignInDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        nextPath={pathname || "/feed"}
+      />
     </nav>
   );
 }
