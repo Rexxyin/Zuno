@@ -67,7 +67,7 @@ export async function generateMetadata({
   const ogDescription = `${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left · Good vibes, real plan.`;
   const planDate = parseDatetimeLocal(plan.datetime);
 
-  const participantCapacity = getParticipantCapacity(plan);
+  const participantCapacity = getParticipantCapacity(plan as any);
   const joinedCount = getJoinedParticipantsCount(plan.participants);
   const spotsOpen = Math.max(participantCapacity - joinedCount, 0);
 

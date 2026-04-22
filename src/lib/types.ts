@@ -35,7 +35,7 @@ export interface Plan {
   location_name: string
   city?: string | null
   datetime: string
-  max_people: number
+  max_people: number | null
   whatsapp_link: string | null
   image_url: string | null
   google_maps_link?: string | null
