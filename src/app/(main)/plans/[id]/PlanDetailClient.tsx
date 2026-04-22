@@ -171,7 +171,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
       : null;
 
   // ─── Single source-of-truth for the OG image URL ───────────────
-  const ogImageUrl = `/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}&image=${plan.image_url}`;
 
   // ─── Shared: open preview dialog ──────────────────────────────
   const openPreview = () => {

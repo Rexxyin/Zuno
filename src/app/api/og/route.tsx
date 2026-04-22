@@ -3,69 +3,18 @@ import { ImageResponse } from "next/og";
 export const runtime = "edge";
 
 export async function GET(req: Request) {
-const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
 
-const planId = searchParams.get("planId");
-
-let isFallback = false;
-
-let title = searchParams.get('title') || "Discover real plans";
-let date = "";
-let spots = "";
-let city = searchParams.get('city') || "";
-
-// ✅ PRIORITY: fetch from planId
-if (planId) {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/plans/${planId}`,
-      { cache: "no-store" }
-    );
-
-    if (!res.ok) throw new Error("no plan");
-
-    const plan = await res.json();
-
-    title = plan.title || searchParams.get('title')  || title;
-    city = plan.city || searchParams.get('city') || "";
-
-    date = new Date(plan.datetime || searchParams.get('date')).toLocaleString("en-IN", {
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-
-    const joined =
-      plan.participants?.filter((p: any) => p.status === "joined").length || 0;
-
-    spots = String(Math.max((plan.max_people || 0) - joined, 0));
-  } catch {
-    isFallback = true;
-  }
-} else {
-  // ✅ fallback mode (no planId)
-  isFallback = true;
-
-  // optional: allow manual params override
-  title = searchParams.get("title") || title;
-  date = searchParams.get("date") || date;
-  spots = searchParams.get("spots") || spots;
-  city = searchParams.get('city') || '';
-}
-
-  // Curated high-quality outdoor/nature backgrounds
-  const BACKGROUNDS = [
-    "https://i.pinimg.com/1200x/48/01/96/480196cc8ff08c6e3e48890f98eb330d.jpg", // sunset beach
-    "https://i.pinimg.com/1200x/2c/91/22/2c9122441b827a1d83ca9614ac0ea263.jpg", // lake mountains
-    "https://i.pinimg.com/736x/ca/0b/eb/ca0beb3d1be9716b6c147f82a2de27a6.jpg", // mountain lake
-    "https://i.pinimg.com/736x/58/33/5c/58335c8ff9174ed9be4e511a437bfe47.jpg", // dramatic nature
-    "https://i.pinimg.com/736x/f3/96/70/f39670c6c3d29469d126c696e2383240.jpg", // adventure
-  ];
+  const title = searchParams.get("title") || "Discover real plans";
+  const city = searchParams.get("city") || "";
+  const date = searchParams.get("date") || "";
+  const spots = searchParams.get("spots") || "";
+  const bgImageUrl = searchParams.get("image");
 
   const imageUrl =
-    BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)] +
-    "?w=1200&q=85&auto=format&fit=crop&crop=center";
+    bgImageUrl ||
+    "https://images.unsplash.com/photo-1616432119481-2876a5d92249" +
+      "?w=1200&q=85&auto=format&fit=crop&crop=center";
 
   // Fetch and convert to base64 for edge compatibility
   const res = await fetch(imageUrl);
@@ -73,20 +22,10 @@ if (planId) {
   const base64 = Buffer.from(buffer).toString("base64");
   const bgSrc = `data:image/jpeg;base64,${base64}`;
 
-  // Split title for two-line dramatic layout (matches the screenshot)
-  // Title words are split so line 1 = first word(s), line 2 = rest — override via titleLine1/titleLine2
-  const titleLine1 =
-    searchParams.get("titleLine1") ||
-    title
-      .split(" ")
-      .slice(0, Math.ceil(title.split(" ").length / 2))
-      .join(" ");
-  const titleLine2 =
-    searchParams.get("titleLine2") ||
-    title
-      .split(" ")
-      .slice(Math.ceil(title.split(" ").length / 2))
-      .join(" ");
+  const words = title.split(" ");
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.slice(0, mid).join(" ");
+  const line2 = words.slice(mid).join(" ");
 
   return new ImageResponse(
     <div
@@ -177,7 +116,8 @@ if (planId) {
               display: "flex",
               height: 2,
               width: 100,
-              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 100%)",
+              background:
+                "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 100%)",
             }}
           />
           {/* Diamond ornament - Left */}
@@ -201,7 +141,8 @@ if (planId) {
               letterSpacing: "8px",
               textTransform: "uppercase",
               fontFamily: "serif",
-              textShadow: "0 4px 20px rgba(255, 213, 74, 0.3), 0 2px 10px rgba(0,0,0,0.5)",
+              textShadow:
+                "0 4px 20px rgba(255, 213, 74, 0.3), 0 2px 10px rgba(0,0,0,0.5)",
             }}
           >
             zuno
@@ -223,7 +164,8 @@ if (planId) {
               display: "flex",
               height: 2,
               width: 100,
-              background: "linear-gradient(90deg, rgba(255,255,255,0.6) 0%, transparent 100%)",
+              background:
+                "linear-gradient(90deg, rgba(255,255,255,0.6) 0%, transparent 100%)",
             }}
           />
         </div>
@@ -250,10 +192,11 @@ if (planId) {
               color: "white",
               lineHeight: 0.95,
               letterSpacing: "-3px",
-              textShadow: "0 8px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)",
+              textShadow:
+                "0 8px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)",
             }}
           >
-            {titleLine1}
+            {line1}
           </div>
 
           {/* Line 2 — Vibrant Yellow italic with glow */}
@@ -270,7 +213,7 @@ if (planId) {
               letterSpacing: "-3px",
             }}
           >
-            {titleLine2}
+            {line2}
           </div>
 
           {/* ─── META ROW: Date + Location ─── */}
@@ -284,7 +227,8 @@ if (planId) {
               borderRadius: 120,
               border: "2px solid rgba(255, 213, 74, 0.4)",
               overflow: "hidden",
-              boxShadow: "0 8px 32px rgba(255, 213, 74, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+              boxShadow:
+                "0 8px 32px rgba(255, 213, 74, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
             }}
           >
             {/* Date pill */}
@@ -334,7 +278,8 @@ if (planId) {
                 display: "flex",
                 width: 2,
                 height: 50,
-                background: "linear-gradient(180deg, transparent 0%, rgba(255, 213, 74, 0.3) 50%, transparent 100%)",
+                background:
+                  "linear-gradient(180deg, transparent 0%, rgba(255, 213, 74, 0.3) 50%, transparent 100%)",
               }}
             />
 
@@ -378,8 +323,10 @@ if (planId) {
               border: "3px solid rgba(255, 213, 74, 0.8)",
               padding: "28px 56px",
               borderRadius: 30,
-              background: "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(20,10,0,0.3) 100%)",
-              boxShadow: "0 12px 48px rgba(255, 213, 74, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
+              background:
+                "linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(20,10,0,0.3) 100%)",
+              boxShadow:
+                "0 12px 48px rgba(255, 213, 74, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
             }}
           >
             {/* People icon */}
@@ -555,7 +502,8 @@ if (planId) {
               fontWeight: 900,
               letterSpacing: "2px",
               textTransform: "uppercase",
-              boxShadow: "0 16px 48px rgba(255, 213, 74, 0.35), 0 8px 24px rgba(0,0,0,0.3)",
+              boxShadow:
+                "0 16px 48px rgba(255, 213, 74, 0.35), 0 8px 24px rgba(0,0,0,0.3)",
               border: "2px solid rgba(255,255,255,0.2)",
             }}
           >

@@ -70,7 +70,7 @@ export async function generateMetadata({
 
   // Use a fully-absolute URL — metadataBase below also ensures this
   // but being explicit avoids any edge-case crawler issues.
-  const ogImage = `${SITE_URL}/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
+  const ogImage = `${SITE_URL}/api/og-standard?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
 
   const planUrl = `${SITE_URL}/plans/${plan.id}`;
 
