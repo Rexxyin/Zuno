@@ -31,6 +31,27 @@ export async function POST(request: Request) {
     details: body.details ? String(body.details) : null,
   }
 
+  if (payload.target_type === 'profile' && payload.target_user_id === auth.user.id) {
+    return NextResponse.json({ error: 'You cannot report your own profile.' }, { status: 400 })
+  }
+
+  if (payload.target_type === 'plan') {
+    if (!payload.target_plan_id) {
+      return NextResponse.json({ error: 'Invalid plan target.' }, { status: 400 })
+    }
+    const { data: targetPlan, error: planError } = await supabase
+      .from('plans')
+      .select('id,host_id')
+      .eq('id', payload.target_plan_id)
+      .single()
+    if (planError || !targetPlan) {
+      return NextResponse.json({ error: 'Plan not found.' }, { status: 404 })
+    }
+    if (targetPlan.host_id === auth.user.id) {
+      return NextResponse.json({ error: 'You cannot report your own plan.' }, { status: 400 })
+    }
+  }
+
   const { data, error } = await supabase.from('safety_reports').insert(payload).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 

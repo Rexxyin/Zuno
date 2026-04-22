@@ -11,7 +11,9 @@ import {
   computeEffectivePlanStatus,
   getJoinedParticipantsCount,
   getParticipantCapacity,
+  isHostIncludedInSpots,
   normalizeVisibility,
+  statusLabel,
   statusBadge,
 } from "@/lib/plan";
 import { buildDicebearAvatarUrl, generateAvatarSeed } from "@/lib/avatar";
@@ -51,6 +53,12 @@ export function PlanCard({
     else if (g === 'female') acc.female += 1;
     return acc;
   }, { male: 0, female: 0 });
+  const hostIncluded = isHostIncludedInSpots(plan);
+  if (hostIncluded) {
+    const hostGender = String((plan as any).host?.gender || "").toLowerCase();
+    if (hostGender === "male") genderAggregate.male += 1;
+    else if (hostGender === "female") genderAggregate.female += 1;
+  }
   const participantCapacity = getParticipantCapacity(plan);
   const spotsLeft = Math.max(participantCapacity - joinedCount, 0);
   const effectiveStatus = computeEffectivePlanStatus(plan as any);
@@ -185,11 +193,9 @@ export function PlanCard({
                   disabled={effectiveStatus !== "open" || spotsLeft === 0}
                   className="rounded-full bg-[#1a1410] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40"
                 >
-                  {effectiveStatus === "open"
-                    ? visibility === "invite_only"
-                      ? "Join"
-                      : "Join"
-                    : badge?.text || "Closed"}
+                  {effectiveStatus === "open" && spotsLeft > 0
+                    ? "Join"
+                    : statusLabel(spotsLeft === 0 ? "full" : effectiveStatus)}
                 </button>
               )}
             </div>
