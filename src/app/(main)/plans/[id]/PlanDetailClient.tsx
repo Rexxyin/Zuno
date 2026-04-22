@@ -48,6 +48,31 @@ type Settlement = {
   settled_at: string | null;
 };
 
+// ─── Spinner component ──────────────────────────────────────────
+function Spinner({
+  size = 28,
+  borderWidth = 3,
+}: {
+  size?: number;
+  borderWidth?: number;
+}) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderWidth,
+        borderStyle: "solid",
+        borderColor: "#e9dfd3",
+        borderTopColor: "#c2602a",
+        borderRadius: "50%",
+        animation: "pd-spin 0.7s linear infinite",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
 export default function PlanDetailClient({ initialPlan }: any) {
   const router = useRouter();
   const [plan, setPlan] = useState(initialPlan);
@@ -72,6 +97,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
   );
   const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [showOGPreview, setShowOGPreview] = useState(false);
+  const [ogImageLoaded, setOgImageLoaded] = useState(false);
+  const [downloadBusy, setDownloadBusy] = useState(false);
 
   const isHost = plan.current_user_id === plan.host_id;
   const isParticipant = (plan.participants || []).some(
@@ -108,7 +135,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
       ? Math.round((totalFilledCount / totalCapacity) * 100)
       : 0;
 
-  // Use final_amount if available, else estimate
   const activeAmount = plan.final_amount
     ? Number(plan.final_amount)
     : plan.cost_amount && plan.cost_mode === "total"
@@ -143,6 +169,52 @@ export default function PlanDetailClient({ initialPlan }: any) {
     plan.host?.gpay_link && perPersonShare
       ? `upi://pay?pa=${encodeURIComponent(plan.host.gpay_link)}&pn=${encodeURIComponent(plan.host?.upi_payee_name || plan.host?.name || "Host")}&am=${encodeURIComponent(perPersonShare.toFixed(2))}&cu=INR&tn=${encodeURIComponent(`ZunoPlan:${plan.title}`)}`
       : null;
+
+  // ─── Single source-of-truth for the OG image URL ───────────────
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
+
+  // ─── Shared: open preview dialog ──────────────────────────────
+  const openPreview = () => {
+    setOgImageLoaded(false);
+    setShowOGPreview(true);
+  };
+
+  // ─── Shared: close preview dialog ─────────────────────────────
+  const closePreview = () => {
+    setShowOGPreview(false);
+    setOgImageLoaded(false);
+  };
+
+  // ─── Shared: copy link ─────────────────────────────────────────
+  const copyLink = () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied!");
+  };
+
+  // ─── Shared: download OG image ─────────────────────────────────
+  const downloadOgImage = async () => {
+    if (downloadBusy) return;
+    setDownloadBusy(true);
+    try {
+      const res = await fetch(ogImageUrl);
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${plan.title}-plan.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Image downloaded!");
+    } catch {
+      toast.error("Download failed — please try again.");
+    } finally {
+      setDownloadBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (isHost) return;
@@ -308,9 +380,18 @@ export default function PlanDetailClient({ initialPlan }: any) {
       body: JSON.stringify({ settled: true }),
     });
     const data = await res.json().catch(() => ({}));
-
     if (res.ok) setSettlements(data.settlements || []);
     else toast.error("Failed to mark as settled");
+  };
+
+  const shareNative = () => {
+    if (navigator.share)
+      navigator.share({
+        title: plan.title,
+        text: `${spotsOpen} spot${spotsOpen === 1 ? "" : "s"} left`,
+        url: window.location.href,
+      });
+    else copyLink();
   };
 
   if (effectiveStatus === "expired" && isVisitor) {
@@ -333,10 +414,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
       </div>
     );
   }
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap');
+
+        @keyframes pd-spin { to { transform: rotate(360deg); } }
 
         .pd * { box-sizing: border-box; }
         .pd {
@@ -452,7 +536,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
         .pd-host-name {
           font-size: 15px; font-weight: 600;
           color: #1a1410;
-            font-family: 'DM Sans', sans-serif;
+          font-family: 'DM Sans', sans-serif;
         }
         .pd-host-actions {
           margin-left: auto;
@@ -468,6 +552,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           font-size: 11px; font-weight: 600;
           text-decoration: none;
           transition: background 0.14s;
+          cursor: pointer;
         }
         .pd-profile-btn:hover { background: #f0ebe3; }
         .pd-ig-btn {
@@ -570,7 +655,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           font-size: 11px; color: #8b7b6d;
         }
 
-        /* ── Cost / split (single unified card) ── */
+        /* ── Cost / split ── */
         .pd-cost-header {
           display: flex; justify-content: space-between; align-items: flex-start;
         }
@@ -580,7 +665,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
           color: #a08b7a; margin-bottom: 3px;
         }
         .pd-cost-amount {
-          
           font-size: 20px; font-weight: 700; color: #1a1410;
         }
         .pd-cost-per { font-size: 13px; font-weight: 400; color: #8b7b6d; }
@@ -598,7 +682,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           margin-top: 6px;
         }
 
-        /* Pay buttons (participant only) */
+        /* Pay buttons */
         .pd-pay-row {
           display: grid; grid-template-columns: 1fr 1fr;
           gap: 7px; margin-top: 12px;
@@ -689,11 +773,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
           box-shadow: 0 8px 24px rgba(26, 20, 16, 0.25), 0 4px 12px rgba(0,0,0,0.15);
           letter-spacing: 0.5px;
         }
-        .pd-btn-join:hover:not(:disabled) { 
+        .pd-btn-join:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 12px 32px rgba(26, 20, 16, 0.35), 0 6px 16px rgba(0,0,0,0.2);
         }
-        .pd-btn-join:active:not(:disabled) { 
+        .pd-btn-join:active:not(:disabled) {
           transform: translateY(0);
           box-shadow: 0 4px 12px rgba(26, 20, 16, 0.25);
         }
@@ -713,7 +797,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
         /* OG Preview Dialog */
         .pd-og-overlay {
           position: fixed; inset: 0;
-          background: rgba(0,0,0,0.5); 
+          background: rgba(0,0,0,0.5);
           display: flex; align-items: center; justify-content: center;
           z-index: 999;
           padding: 16px;
@@ -738,28 +822,34 @@ export default function PlanDetailClient({ initialPlan }: any) {
         .pd-og-close {
           background: none; border: none;
           cursor: pointer; color: #8b7b6d;
-          font-size: 20px; padding: 0;
+          padding: 0; display: grid; place-items: center;
         }
         .pd-og-content {
           padding: 12px;
           max-height: 60vh;
           overflow-y: auto;
         }
+        .pd-og-image-wrap {
+          position: relative;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #f9f6f1;
+          border: 1px solid #f0ebe3;
+          min-height: 200px;
+          display: flex; align-items: center; justify-content: center;
+        }
         .pd-og-preview {
           width: 100%;
-          border-radius: 12px;
-          border: 1px solid #f0ebe3;
-          background: #f9f6f1;
+          display: block;
         }
         .pd-og-footer {
           padding: 12px;
           border-top: 1px solid #f3ede6;
-      display: flex;
-  justify-content: space-around;
-  margin-top: 14px;
+          display: flex;
+          justify-content: space-around;
         }
         .pd-og-btn {
-          padding: 12px;
+          padding: 11px 14px;
           border-radius: 12px;
           border: 1px solid #e2d9ce;
           background: white;
@@ -774,14 +864,17 @@ export default function PlanDetailClient({ initialPlan }: any) {
           gap: 6px;
           white-space: nowrap;
         }
-        .pd-og-btn:hover { 
+        .pd-og-btn:hover:not(:disabled) {
           background: #faf7f3;
           border-color: #d9cec3;
         }
+        .pd-og-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .pd-og-btn.primary {
           background: #FFD54A;
           color: black;
+          border-color: #FFD54A;
         }
+        .pd-og-btn.primary:hover:not(:disabled) { background: #ffc107; }
 
         /* Share Banner */
         .pd-share-banner {
@@ -806,13 +899,14 @@ export default function PlanDetailClient({ initialPlan }: any) {
           transition: all 0.15s;
           white-space: nowrap;
         }
-        .pd-share-btn:hover { background: #faf7f3; }
+        .pd-share-btn:hover:not(:disabled) { background: #faf7f3; }
+        .pd-share-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .pd-share-btn.primary {
           background: #1a1410;
           color: white;
           border-color: #1a1410;
         }
-        .pd-share-btn.primary:hover { background: #3a2f28; }
+        .pd-share-btn.primary:hover:not(:disabled) { background: #3a2f28; }
 
         /* Host controls */
         .pd-ctrl-lbl {
@@ -889,21 +983,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             <button className="pd-icon-btn" onClick={() => router.back()}>
               <ArrowLeft size={17} />
             </button>
-            <button
-              className="pd-icon-btn"
-              onClick={() => {
-                if (navigator.share)
-                  navigator.share({
-                    title: plan.title,
-                    text: `${spotsOpen} spot${spotsOpen === 1 ? "" : "s"} left`,
-                    url: window.location.href,
-                  });
-                else {
-                  navigator.clipboard.writeText(window.location.href);
-                  toast.success("Link copied!");
-                }
-              }}
-            >
+            <button className="pd-icon-btn" onClick={shareNative}>
               <Share2 size={15} />
             </button>
           </div>
@@ -962,7 +1042,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
 
         {/* ── Body ── */}
         <div className="pd-body">
-          {/* Share Banner */}
+          {/* ── Share Banner ── */}
           <div className="pd-share-banner">
             <span style={{ fontSize: 11, fontWeight: 600, color: "#5c4a38" }}>
               Share this plan
@@ -970,49 +1050,42 @@ export default function PlanDetailClient({ initialPlan }: any) {
             <div style={{ display: "flex", gap: 6 }}>
               <button
                 type="button"
-                onClick={() => setShowOGPreview(true)}
+                onClick={openPreview}
                 className="pd-share-btn"
                 title="Preview & Share"
               >
-                <Share2 size={13} />{" "}
+                <Share2 size={13} />
                 <span className="hidden sm:inline">Preview</span>
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const url =
-                    typeof window !== "undefined" ? window.location.href : "";
-                  navigator.clipboard.writeText(url);
-                  toast.success("Link copied!");
-                }}
+                onClick={copyLink}
                 className="pd-share-btn"
                 title="Copy link"
               >
-                <Copy size={13} />{" "}
+                <Copy size={13} />
                 <span className="hidden sm:inline">Copy Link</span>
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const imgUrl = `/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
-                  const link = document.createElement("a");
-                  link.href = imgUrl;
-                  link.download = `${plan.title}-plan.png`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  toast.success("Image downloaded!");
-                }}
+                onClick={downloadOgImage}
+                disabled={downloadBusy}
                 className="pd-share-btn primary"
                 title="Download image for sharing"
               >
-                <Download size={13} />{" "}
-                <span className="hidden sm:inline">Download</span>
+                {downloadBusy ? (
+                  <Spinner size={13} borderWidth={2} />
+                ) : (
+                  <Download size={13} />
+                )}
+                <span className="hidden sm:inline">
+                  {downloadBusy ? "Saving…" : "Download"}
+                </span>
               </button>
             </div>
           </div>
 
-          {/* Host */}
+          {/* ── Host ── */}
           <div className="pd-host">
             <img
               src={
@@ -1056,7 +1129,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           </div>
 
-          {/* Description accordion */}
+          {/* ── Description accordion ── */}
           {plan.description && (
             <div className="pd-card">
               <button
@@ -1079,7 +1152,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           )}
 
-          {/* Date + Group */}
+          {/* ── Date + Group ── */}
           <div className="pd-info-grid">
             <div className="pd-info-tile">
               <div className="pd-info-icon">
@@ -1103,7 +1176,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           </div>
 
-          {/* 📍 LOCATION */}
+          {/* ── Location ── */}
           {mapLink && (
             <a
               href={mapLink}
@@ -1121,7 +1194,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </a>
           )}
 
-          {/* Participants progress */}
+          {/* ── Participants progress ── */}
           <div className="pd-card pd-cp">
             <div
               style={{
@@ -1201,7 +1274,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             )}
           </div>
 
-          {/* ── Unified cost / split card ── */}
+          {/* ── Cost / split card ── */}
           {!!plan.cost_amount && (
             <div className="pd-card pd-cp">
               <div className="pd-cost-header">
@@ -1227,7 +1300,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 {plan.final_amount ? " · confirmed by host" : " · may change"}
               </p>
 
-              {/* Participant pay actions — only when final amount set */}
               {isParticipant && !!plan.final_amount && !!upiLink && (
                 <div className="pd-pay-row">
                   <a href={upiLink || "#"} className="pd-pay-upi">
@@ -1244,7 +1316,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 </div>
               )}
 
-              {/* Settlement tracker — host + participants when final set */}
               {(isHost || isParticipant) &&
                 !!plan.final_amount &&
                 joinedParticipants.length > 0 && (
@@ -1305,11 +1376,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
                                     borderRadius: 999,
                                     padding: "4px 8px",
                                     fontSize: 11,
+                                    cursor: "pointer",
+                                    background: "none",
                                   }}
                                   disabled={busy === `remove-${p.user_id}`}
                                 >
                                   {busy === `remove-${p.user_id}`
-                                    ? "Removing..."
+                                    ? "Removing…"
                                     : "Remove"}
                                 </button>
                               )}
@@ -1322,7 +1395,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           )}
 
-          {/* WhatsApp */}
+          {/* ── WhatsApp group ── */}
           {(isHost || isParticipant) && plan.whatsapp_link && (
             <a
               href={plan.whatsapp_link}
@@ -1335,16 +1408,15 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 width="20"
                 height="20"
                 fill="currentColor"
-                className="bi bi-whatsapp"
                 viewBox="0 0 16 16"
               >
                 <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
-              </svg>{" "}
+              </svg>
               Open WhatsApp group
             </a>
           )}
 
-          {/* Host controls */}
+          {/* ── Host controls ── */}
           {isHost && (
             <div className="pd-card pd-cp">
               <p className="pd-ctrl-lbl">Host controls</p>
@@ -1406,7 +1478,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           )}
 
-          {/* Pending requests panel */}
+          {/* ── Pending requests panel ── */}
           {showRequests && pendingRequests.length > 0 && (
             <div className="pd-card">
               <p className="pd-req-header">
@@ -1455,7 +1527,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
             </div>
           )}
 
-          {/* CTA */}
+          {/* ── CTA ── */}
           <div style={{ paddingBottom: 8 }}>
             {plan.removed_by_host_for_current_user && (
               <div
@@ -1465,7 +1537,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 Host removed you from this plan
               </div>
             )}
-
             {isParticipant && !isHost && (
               <div className="pd-joined-badge">
                 <CheckCircle2 size={12} /> You're in this plan!
@@ -1480,7 +1551,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                   color: "#b91c1c",
                 }}
               >
-                You were removed by the host and can’t rejoin this plan.
+                You were removed by the host and can't rejoin this plan.
               </p>
             ) : isHost ? null : isParticipant ? (
               <button
@@ -1531,7 +1602,6 @@ export default function PlanDetailClient({ initialPlan }: any) {
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-
                       padding: 0,
                       display: "flex",
                       alignItems: "center",
@@ -1544,6 +1614,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
             )}
           </div>
         </div>
+
+        {/* ── Dialogs ── */}
         <ActionDialog
           open={showLeaveDialog}
           onClose={() => setShowLeaveDialog(false)}
@@ -1642,29 +1714,30 @@ export default function PlanDetailClient({ initialPlan }: any) {
           cancelLabel="Got it"
         />
 
-        {/* OG Preview Dialog */}
+        {/* ── OG Preview Dialog ── */}
         {showOGPreview && (
-          <div
-            className="pd-og-overlay"
-            onClick={() => setShowOGPreview(false)}
-          >
+          <div className="pd-og-overlay" onClick={closePreview}>
             <div className="pd-og-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="pd-og-header">
                 <div className="pd-og-title">Share This Plan</div>
-                <button
-                  className="pd-og-close"
-                  onClick={() => setShowOGPreview(false)}
-                >
+                <button className="pd-og-close" onClick={closePreview}>
                   <X size={18} />
                 </button>
               </div>
+
               <div className="pd-og-content">
-                <img
-                  src={`/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`}
-                  alt="Plan preview"
-                  className="pd-og-preview"
-                  style={{ width: "100%", height: "auto" }}
-                />
+                {/* Image with loader */}
+                <div className="pd-og-image-wrap">
+                  {!ogImageLoaded && <Spinner size={28} borderWidth={3} />}
+                  <img
+                    src={ogImageUrl}
+                    alt="Plan preview"
+                    className="pd-og-preview"
+                    onLoad={() => setOgImageLoaded(true)}
+                    style={{ display: ogImageLoaded ? "block" : "none" }}
+                  />
+                </div>
+
                 <div
                   style={{
                     marginTop: 14,
@@ -1686,73 +1759,73 @@ export default function PlanDetailClient({ initialPlan }: any) {
                   </div>
                 </div>
               </div>
+
               <div className="pd-og-footer">
+                {/* Copy link */}
                 <button
                   type="button"
                   className="pd-og-btn"
-                  onClick={() => {
-                    const url =
-                      typeof window !== "undefined" ? window.location.href : "";
-                    navigator.clipboard.writeText(url);
-                    toast.success("Link copied!");
-                  }}
+                  onClick={copyLink}
                   title="Copy plan link"
                 >
                   <Copy size={14} />
                 </button>
+
+                {/* Download */}
                 <button
                   type="button"
                   className="pd-og-btn"
-                  onClick={() => {
-                    const imgUrl = `/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
-                    const link = document.createElement("a");
-                    link.href = imgUrl;
-                    link.download = `${plan.title}-plan.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    toast.success("Image downloaded!");
-                  }}
-                  title="Download image for sharing"
+                  onClick={downloadOgImage}
+                  disabled={downloadBusy}
+                  title="Download image"
                 >
-                  <Download size={14} />
+                  {downloadBusy ? (
+                    <Spinner size={14} borderWidth={2} />
+                  ) : (
+                    <Download size={14} />
+                  )}
                 </button>
+
+                {/* WhatsApp share */}
                 <button
                   type="button"
                   className="pd-og-btn primary"
                   onClick={() => {
                     const url =
                       typeof window !== "undefined" ? window.location.href : "";
-                    const text = `Check out this plan: ${plan.title}`;
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`;
-                    window.open(whatsappUrl, "_blank");
+                    window.open(
+                      `https://wa.me/?text=${encodeURIComponent(`Check out this plan: ${plan.title} ${url}`)}`,
+                      "_blank",
+                    );
                   }}
                   title="Share on WhatsApp"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
+                    width="13"
+                    height="13"
                     fill="currentColor"
-                    className="bi bi-whatsapp"
                     viewBox="0 0 16 16"
                   >
                     <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
-                  </svg>{" "}
+                  </svg>
                 </button>
+
+                {/* Instagram share */}
                 <button
                   type="button"
                   className="pd-og-btn primary"
                   onClick={() => {
                     const url =
                       typeof window !== "undefined" ? window.location.href : "";
-                    const text = `Check out this plan: ${plan.title}`;
-                    const instaUrl = `https://www.instagram.com/?text=${encodeURIComponent(text + " " + url)}`;
-                    window.open(instaUrl, "_blank");
+                    window.open(
+                      `https://www.instagram.com/?text=${encodeURIComponent(`Check out this plan: ${plan.title} ${url}`)}`,
+                      "_blank",
+                    );
                   }}
                   title="Share on Instagram"
                 >
-                  <Instagram size={14} />
+                  <Instagram size={13} />
                 </button>
               </div>
             </div>

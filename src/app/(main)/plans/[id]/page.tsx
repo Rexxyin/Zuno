@@ -8,6 +8,7 @@ import { hasBlockBetween } from "@/lib/server/safety";
 import { parseDatetimeLocal, formatDateTime } from "@/lib/datetime";
 import { getParticipantCapacity } from "@/lib/plan";
 import { getJoinedParticipantsCount } from "@/lib/plan";
+
 const SITE_URL = "https://zunoplan.vercel.app";
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ function buildOgTitle(plan: {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>; // ← Promise type
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
   const cookieStore = await cookies();
@@ -54,28 +55,30 @@ export async function generateMetadata({
 
   if (!plan) return { title: "Plan not found" };
 
-  const joined = (plan.participants || []).filter(
-    (p: any) => p.status === "joined",
-  ).length;
   const ogTitle = buildOgTitle({
     title: plan.title,
     datetime: plan.datetime,
     city: (plan as any).city,
   });
 
-  const spotsLeft = Math.max((plan.max_people || 0) - joined, 0);
-  const ogDescription = `${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left · Good vibes, real plan.`;
   const planDate = parseDatetimeLocal(plan.datetime);
-
   const participantCapacity = getParticipantCapacity(plan as any);
   const joinedCount = getJoinedParticipantsCount(plan.participants);
   const spotsOpen = Math.max(participantCapacity - joinedCount, 0);
 
+  const ogDescription = `${spotsOpen} spot${spotsOpen === 1 ? "" : "s"} left · Join plan now.`;
+
+  // Use a fully-absolute URL — metadataBase below also ensures this
+  // but being explicit avoids any edge-case crawler issues.
   const ogImage = `${SITE_URL}/api/og?title=${encodeURIComponent(plan.title)}&city=${encodeURIComponent(plan.city || "")}&date=${encodeURIComponent(formatDateTime(planDate))}&spots=${spotsOpen}`;
 
   const planUrl = `${SITE_URL}/plans/${plan.id}`;
 
   return {
+    // ✅ KEY FIX: metadataBase ensures Next.js resolves all relative
+    // image/url paths to absolute URLs that crawlers can actually fetch.
+    metadataBase: new URL(SITE_URL),
+
     title: ogTitle,
     description: ogDescription,
     openGraph: {
@@ -124,6 +127,7 @@ export default async function Page({ params }: any) {
     )
     .eq("plan_id", id)
     .eq("status", "joined");
+
   const { data: settlements } = await supabase
     .from("expense_settlements")
     .select("user_id,settled,settled_at")
@@ -144,6 +148,7 @@ export default async function Page({ params }: any) {
   ) {
     return notFound();
   }
+
   const isParticipant = Boolean(
     (participants || []).some((p: any) => p.user_id === auth.user?.id),
   );
@@ -152,7 +157,6 @@ export default async function Page({ params }: any) {
   const visibility = normalizeVisibility(plan.visibility);
 
   if (visibility === "private" && !(isParticipant || isHost)) return notFound();
-  // Invite-only plans are hidden from public feed, but accessible via direct link.
   if (effectiveStatus === "expired" && !(isParticipant || isHost))
     return notFound();
 
@@ -164,6 +168,7 @@ export default async function Page({ params }: any) {
         .eq("user_id", auth.user.id)
         .maybeSingle()
     : { data: null };
+
   const { data: currentUser } = auth.user
     ? await supabase
         .from("users")
