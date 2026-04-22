@@ -912,7 +912,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           padding: 10px 14px;
           display: flex; gap: 8px; align-items: center;
           justify-content: space-between;
-          z-index: 100;
+          z-index: 40;
         }
         .pd-share-btn {
           display: flex; align-items: center; gap: 6px;
@@ -1146,14 +1146,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
               </Link>
               {!!plan.current_user_id &&
                 plan.current_user_id !== plan.host_id && (
-                <button
-                  onClick={() => setShowReportDialog(true)}
-                  className="pd-profile-btn"
-                  type="button"
-                  disabled={hasReportedPlan}
-                >
-                  {hasReportedPlan ? "Reported" : "Report plan"}
-                </button>
+                  <button
+                    onClick={() => setShowReportDialog(true)}
+                    className="pd-profile-btn"
+                    type="button"
+                  >
+                    {"Report plan"}
+                  </button>
                 )}
             </div>
           </div>
@@ -1653,9 +1652,9 @@ export default function PlanDetailClient({ initialPlan }: any) {
                     ? "This plan is for women only"
                     : spotsOpen === 0
                       ? "Plan is full"
-                    : busy === "join"
-                      ? "Please wait…"
-                      : statusLabel(effectiveStatus)}
+                      : busy === "join"
+                        ? "Please wait…"
+                        : statusLabel(effectiveStatus)}
                 </button>
                 <div
                   style={{
