@@ -22,6 +22,11 @@ import { RichTextEditor, RichTextDisplay } from "@/components/RichTextEditor";
 
 const steps = ["Details", "Meetup", "Settings", "Review"];
 
+function toDatetimeLocalValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function CreatePlanPage() {
   const router = useRouter();
   const { selectedCity, setSelectedCity } = useCity();
@@ -36,7 +41,7 @@ export default function CreatePlanPage() {
     city: DEFAULT_LAUNCH_CITY,
     location_name: "",
     google_maps_link: "",
-    datetime: "",
+    datetime: toDatetimeLocalValue(new Date()),
     max_people: "1",
     whatsapp_link: "",
     requireApproval: false,
@@ -87,6 +92,11 @@ export default function CreatePlanPage() {
       return;
     }
     try {
+      if (new Date(formData.datetime).getTime() < Date.now()) {
+        toast.error("Please choose a future date & time");
+        setCurrentStep(1);
+        return;
+      }
       setLoading(true);
       const res = await fetch("/api/plans", {
         method: "POST",
@@ -243,6 +253,7 @@ export default function CreatePlanPage() {
               name="datetime"
               value={formData.datetime}
               onChange={handleChange}
+              min={toDatetimeLocalValue(new Date())}
               className="w-full rounded-xl bg-[#EFE7DA] px-3 py-2.5 text-sm text-[#3A2E2A]"
             />
           </div>

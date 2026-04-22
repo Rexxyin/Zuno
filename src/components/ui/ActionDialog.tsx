@@ -49,7 +49,7 @@ export function ActionDialog({
               type="button"
               onClick={onConfirm}
               disabled={busy}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold text-white ${confirmTone === 'danger' ? 'bg-red-600' : 'bg-[#1f1711]'} ${busy ? 'opacity-60' : ''}`}
+              className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all duration-150 ${confirmTone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1f1711] hover:bg-[#352821]'} ${busy ? 'cursor-not-allowed opacity-60' : 'hover:-translate-y-[1px]'}`}
             >
               {busy ? 'Please wait…' : confirmLabel}
             </button>

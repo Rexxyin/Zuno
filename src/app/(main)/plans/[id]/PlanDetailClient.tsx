@@ -91,6 +91,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState("unsafe_plan");
   const [reportDetails, setReportDetails] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
   const [hasReportedPlan, setHasReportedPlan] = useState(false);
   const [showRemoveDialogFor, setShowRemoveDialogFor] = useState<string | null>(
     null,
@@ -99,6 +100,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
   const [showOGPreview, setShowOGPreview] = useState(false);
   const [ogImageLoaded, setOgImageLoaded] = useState(false);
   const [downloadBusy, setDownloadBusy] = useState(false);
+  const reportReasonOptions = [
+    { value: "fake_profile", label: "Fake Profile" },
+    { value: "harassment", label: "Harassment" },
+    { value: "unsafe_plan", label: "Unsafe Plan" },
+    { value: "spam", label: "Spam" },
+    { value: "other", label: "Other" },
+  ];
 
   const isHost = plan.current_user_id === plan.host_id;
   const isParticipant = (plan.participants || []).some(
@@ -120,6 +128,12 @@ export default function PlanDetailClient({ initialPlan }: any) {
     { male: 0, female: 0, other: 0 },
   );
   const hostIncluded = isHostIncludedInSpots(plan);
+  if (hostIncluded) {
+    const hostGender = String(plan.host?.gender || "").toLowerCase();
+    if (hostGender === "male") genderAggregate.male += 1;
+    else if (hostGender === "female") genderAggregate.female += 1;
+    else if (hostGender) genderAggregate.other += 1;
+  }
   const participantCapacity = getParticipantCapacity(plan);
   const totalFilledCount = hostIncluded ? joinedCount + 1 : joinedCount;
   const totalCapacity = Number(plan.max_people || 0);
@@ -318,6 +332,10 @@ export default function PlanDetailClient({ initialPlan }: any) {
     if (res.ok) {
       setPendingRequests(data || []);
       setShowRequests(true);
+    } else {
+      toast.error("Unable to load requests", {
+        description: data?.error || "Please try again.",
+      });
     }
   };
 
@@ -334,6 +352,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
   };
 
   const reportPlan = async () => {
+    setReportBusy(true);
     const res = await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -349,11 +368,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
     else {
       setHasReportedPlan(true);
       setShowReportDialog(false);
+      setReportDetails("");
       toast.success(
         data.message ||
           "Report submitted. You can leave this plan anytime if you feel unsafe.",
       );
     }
+    setReportBusy(false);
   };
 
   const removeParticipant = async (userId: string) => {
@@ -1116,7 +1137,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
               >
                 <ExternalLink size={10} /> View profile
               </Link>
-              {!isHost && (
+              {!!plan.current_user_id &&
+                plan.current_user_id !== plan.host_id && (
                 <button
                   onClick={() => setShowReportDialog(true)}
                   className="pd-profile-btn"
@@ -1125,7 +1147,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 >
                   {hasReportedPlan ? "Reported" : "Report plan"}
                 </button>
-              )}
+                )}
             </div>
           </div>
 
@@ -1272,6 +1294,79 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 </span>
               </div>
             )}
+            {(isHost || isParticipant) && joinedParticipants.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {joinedParticipants.map((p: any) => (
+                  <Link
+                    key={`joined-${p.user_id}`}
+                    href={`/profile/${p.user_id}`}
+                    className="pd-profile-btn"
+                  >
+                    <ExternalLink size={10} /> {p.user?.name || "Member"}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {isHost && joinedParticipants.length > 0 && (
+              <div
+                style={{
+                  marginTop: 12,
+                  borderTop: "1px solid #f3ede6",
+                  paddingTop: 10,
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#a08b7a",
+                  }}
+                >
+                  Manage participants
+                </p>
+                {joinedParticipants.map((p: any) => (
+                  <div
+                    key={`manage-${p.user_id}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <Link
+                      href={`/profile/${p.user_id}`}
+                      className="pd-profile-btn"
+                      style={{ padding: "4px 10px" }}
+                    >
+                      <ExternalLink size={10} />
+                      {p.user?.name || "Member"}
+                    </Link>
+                    {String(p.user_id) !== String(plan.host_id) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRemoveDialogFor(p.user_id)}
+                        style={{
+                          border: "1px solid #e5d7ca",
+                          borderRadius: 999,
+                          padding: "4px 8px",
+                          fontSize: 11,
+                          cursor: "pointer",
+                          background: "none",
+                        }}
+                        disabled={busy === `remove-${p.user_id}`}
+                      >
+                        {busy === `remove-${p.user_id}` ? "Removing…" : "Remove"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Cost / split card ── */}
@@ -1339,6 +1434,13 @@ export default function PlanDetailClient({ initialPlan }: any) {
                             <span className="pd-settle-name">
                               {p.user?.name || "Member"}
                             </span>
+                            <Link
+                              href={`/profile/${p.user_id}`}
+                              className="pd-profile-btn"
+                              style={{ padding: "4px 8px" }}
+                            >
+                              <ExternalLink size={10} /> Profile
+                            </Link>
                           </div>
                           <div
                             style={{
@@ -1505,6 +1607,12 @@ export default function PlanDetailClient({ initialPlan }: any) {
                     <span style={{ fontSize: 13, color: "#1a1410" }}>
                       {req.user?.name || "User"}
                     </span>
+                    <Link
+                      href={`/profile/${req.user_id}`}
+                      className="pd-profile-btn"
+                    >
+                      <ExternalLink size={10} /> Profile
+                    </Link>
                   </div>
                   <div className="pd-req-actions">
                     <button
@@ -1569,6 +1677,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
                   onClick={join}
                   disabled={
                     busy === "join" ||
+                    spotsOpen === 0 ||
                     effectiveStatus !== "open" ||
                     (plan.female_only && plan.current_user_gender !== "female")
                   }
@@ -1576,6 +1685,8 @@ export default function PlanDetailClient({ initialPlan }: any) {
                 >
                   {plan.female_only && plan.current_user_gender !== "female"
                     ? "This plan is for women only"
+                    : spotsOpen === 0
+                      ? "Plan is full"
                     : busy === "join"
                       ? "Please wait…"
                       : statusLabel(effectiveStatus)}
@@ -1665,6 +1776,7 @@ export default function PlanDetailClient({ initialPlan }: any) {
           open={showReportDialog}
           onClose={() => setShowReportDialog(false)}
           onConfirm={reportPlan}
+          busy={reportBusy}
           title="Report plan"
           description="If something feels wrong, report it and leave immediately."
           confirmLabel="Submit report"
@@ -1675,11 +1787,11 @@ export default function PlanDetailClient({ initialPlan }: any) {
               onChange={(e) => setReportReason(e.target.value)}
               className="w-full rounded-lg border border-[#d7c6b5] bg-white px-3 py-2 text-sm"
             >
-              <option value="fake_profile">fake_profile</option>
-              <option value="harassment">harassment</option>
-              <option value="unsafe_plan">unsafe_plan</option>
-              <option value="spam">spam</option>
-              <option value="other">other</option>
+              {reportReasonOptions.map((reason) => (
+                <option key={reason.value} value={reason.value}>
+                  {reason.label}
+                </option>
+              ))}
             </select>
             <textarea
               value={reportDetails}

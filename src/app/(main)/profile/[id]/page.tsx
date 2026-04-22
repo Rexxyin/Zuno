@@ -24,11 +24,11 @@ type EditableProfile = {
 };
 
 const REPORT_REASONS = [
-  "fake_profile",
-  "harassment",
-  "unsafe_plan",
-  "spam",
-  "other",
+  { value: "fake_profile", label: "Fake Profile" },
+  { value: "harassment", label: "Harassment" },
+  { value: "unsafe_plan", label: "Unsafe Plan" },
+  { value: "spam", label: "Spam" },
+  { value: "other", label: "Other" },
 ];
 
 export default function ProfilePage() {
@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState("fake_profile");
   const [reportDetails, setReportDetails] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
   const [showAvatarActions, setShowAvatarActions] = useState(false);
 
   const [edit, setEdit] = useState<EditableProfile>({
@@ -87,13 +88,14 @@ export default function ProfilePage() {
     }
 
     setAuthUserId(authUser.id);
-    const targetId = isOwnProfile ? authUser.id : id;
+    const viewingSelf = id === "me" || !id || id === authUser.id;
+    const targetId = viewingSelf ? authUser.id : id;
     const { data } = await supabase
       .from("users")
       .select("*")
       .eq("id", targetId)
       .single();
-    if (data && isOwnProfile) (data as any).email = authUser.email || "";
+    if (data && viewingSelf) (data as any).email = authUser.email || "";
 
     if (!data) {
       setUser(null);
@@ -105,7 +107,7 @@ export default function ProfilePage() {
     if (!profile.avatar_seed) {
       const nextSeed = generateAvatarSeed();
       profile = { ...profile, avatar_seed: nextSeed };
-      if (isOwnProfile)
+      if (viewingSelf)
         await supabase
           .from("users")
           .update({ avatar_seed: nextSeed })
@@ -209,6 +211,7 @@ export default function ProfilePage() {
 
   const submitReport = async () => {
     if (!user || isOwnProfile) return;
+    setReportBusy(true);
     const res = await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -226,6 +229,7 @@ export default function ProfilePage() {
       setShowReportDialog(false);
       setReportDetails("");
     }
+    setReportBusy(false);
   };
 
   const handleSignOut = async () => {
@@ -515,6 +519,7 @@ export default function ProfilePage() {
         open={showReportDialog}
         onClose={() => setShowReportDialog(false)}
         onConfirm={submitReport}
+        busy={reportBusy}
         title="Report profile"
         description="Tell us what happened."
         confirmLabel="Submit report"
@@ -526,8 +531,8 @@ export default function ProfilePage() {
             className="w-full rounded-lg border border-[#d7c6b5] bg-white px-3 py-2 text-sm"
           >
             {REPORT_REASONS.map((reason) => (
-              <option key={reason} value={reason}>
-                {reason}
+              <option key={reason.value} value={reason.value}>
+                {reason.label}
               </option>
             ))}
           </select>

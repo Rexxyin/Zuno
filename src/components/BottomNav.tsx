@@ -3,14 +3,51 @@
 import Link from "next/link";
 import { Flame, Plus, Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function BottomNav({
-  pendingRequestsCount = 0,
+  pendingRequestsCount,
 }: {
   pendingRequestsCount?: number;
 }) {
   const pathname = usePathname();
   const is = (p: string) => pathname.startsWith(p);
+  const [autoPendingCount, setAutoPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof pendingRequestsCount === "number") return;
+    let cancelled = false;
+    const loadPendingCount = async () => {
+      const { data: auth } = await createClient().auth.getUser();
+      if (!auth.user) return;
+      const res = await fetch("/api/plans?includeMine=1", { cache: "no-store" });
+      const data = await res.json().catch(() => []);
+      if (!Array.isArray(data) || cancelled) return;
+      const hostedPending = data
+        .filter((plan: any) => plan.host_id === auth.user?.id)
+        .reduce(
+          (sum: number, plan: any) =>
+            sum +
+            (plan.participants || []).filter((p: any) => p.status === "pending")
+              .length,
+          0,
+        );
+      setAutoPendingCount(hostedPending);
+    };
+    loadPendingCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingRequestsCount]);
+
+  const resolvedPendingCount = useMemo(
+    () =>
+      typeof pendingRequestsCount === "number"
+        ? pendingRequestsCount
+        : autoPendingCount,
+    [autoPendingCount, pendingRequestsCount],
+  );
 
   const navItems = [
     { href: "/feed", icon: Flame, label: "Discover", active: is("/feed") },
@@ -19,7 +56,7 @@ export function BottomNav({
       icon: Heart,
       label: "My Plans",
       active: is("/my-plans"),
-      badge: pendingRequestsCount,
+      badge: resolvedPendingCount,
     },
   ];
 
